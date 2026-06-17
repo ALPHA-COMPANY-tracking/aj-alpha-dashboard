@@ -1,14 +1,58 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Pencil, RefreshCw } from 'lucide-react'
 import { PageHeader } from '../components/layout/PageHeader'
 import { Card } from '../components/ui/Card'
 import { buildDailyRows } from '../data/metrics'
+import { apiEnabled, fetchDaily } from '../lib/api'
 import { formatBRL, formatDate, formatNumber } from '../lib/format'
 import type { DailyMetric } from '../types'
 
+/** Dias zerados (fallback de produção quando ainda não há dados / API fora). */
+function zeroRows(days: number): DailyMetric[] {
+  const now = new Date()
+  return Array.from({ length: days }, (_, i) => {
+    const d = new Date(now)
+    d.setDate(now.getDate() - i)
+    return {
+      data: d.toISOString().slice(0, 10),
+      faturamento: 0,
+      totalVendas: 0,
+      leads: 0,
+      gastoAnuncios: 0,
+      gastosOperacionais: 0,
+      origemAnuncios: 'sync' as const,
+    }
+  })
+}
+
 export function DadosDiarios() {
-  const [rows, setRows] = useState<DailyMetric[]>(() => buildDailyRows(14))
+  const [rows, setRows] = useState<DailyMetric[]>([])
+  const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<string | null>(null)
+
+  // Em produção busca dados reais do Supabase; em dev usa o mock.
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    if (apiEnabled) {
+      fetchDaily(14)
+        .then((r) => {
+          if (!cancelled) setRows(r)
+        })
+        .catch(() => {
+          if (!cancelled) setRows(zeroRows(14))
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false)
+        })
+    } else {
+      setRows(buildDailyRows(14))
+      setLoading(false)
+    }
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const totals = useMemo(
     () =>
@@ -55,6 +99,20 @@ export function DadosDiarios() {
               </tr>
             </thead>
             <tbody>
+              {loading && (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-muted">
+                    Carregando…
+                  </td>
+                </tr>
+              )}
+              {!loading && rows.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-muted">
+                    Sem dados no período.
+                  </td>
+                </tr>
+              )}
               {rows.map((r) => {
                 const isEditing = editing === r.data
                 return (

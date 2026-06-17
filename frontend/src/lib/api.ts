@@ -1,4 +1,5 @@
 import type { DashboardMetrics, ChartData } from '../data/metrics'
+import type { DailyMetric } from '../types'
 
 // URL da API. Na Vercel, vazio significa "mesmo dominio".
 const RAW = import.meta.env.VITE_API_URL as string | undefined
@@ -28,4 +29,11 @@ export async function fetchDashboard(params: {
   const res = await fetch(`${API}/api/dashboard?${q.toString()}`)
   if (!res.ok) throw new Error(`API respondeu ${res.status}`)
   return res.json() as Promise<DashboardResponse>
+}
+
+export async function fetchDaily(days = 14): Promise<DailyMetric[]> {
+  const res = await fetch(`${API}/api/daily?days=${days}`)
+  if (!res.ok) throw new Error(`API respondeu ${res.status}`)
+  const json = (await res.json()) as { rows: DailyMetric[] }
+  return json.rows
 }
