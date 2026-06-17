@@ -13,6 +13,8 @@ backend/dist
 .deploy-secrets.tmp
 .vercel-cli-auth
 frontend/.vercel-cli-auth
+.vercel
+frontend/.vercel
 
 # Logs
 *.log
@@ -21,3 +23,5 @@ frontend/dev.log
 # Editor / SO
 .DS_Store
 Thumbs.db
+
+.vercel
