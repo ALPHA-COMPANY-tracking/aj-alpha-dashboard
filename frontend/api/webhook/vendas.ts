@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import crypto from 'node:crypto'
 import { z } from 'zod'
-import { supabase } from '../../_lib/supabase.js'
+import { supabase } from '../_lib/supabase.js'
 
 const PostbackSchema = z
   .object({
