@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
   DollarSign,
-  Megaphone,
   ShoppingCart,
   TrendingUp,
   Store,
@@ -92,14 +91,6 @@ export function Dashboard() {
           tone="accent"
           loading={loading}
           delta={{ value: pctDelta(metrics.faturamento, prev.faturamento) }}
-        />
-        <MetricCard
-          label="Gasto com Anuncios"
-          value={formatBRL(metrics.gastoAnuncios)}
-          hint="Sincronizado da Meta Ads"
-          icon={Megaphone}
-          loading={loading}
-          delta={{ value: pctDelta(metrics.gastoAnuncios, prev.gastoAnuncios), goodWhenUp: false }}
         />
         <MetricCard
           label="Lucro Liquido"
