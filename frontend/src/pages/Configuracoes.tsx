@@ -257,18 +257,20 @@ function BMCard({
             />
           </div>
 
-          {!readonly && (
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-foreground">Access Token</label>
-              <div className="flex items-center gap-2">
-                <input
-                  readOnly={!editando}
-                  type={verToken ? 'text' : 'password'}
-                  value={bm.token}
-                  placeholder="EAAB..."
-                  onChange={(e) => onChange({ token: e.target.value })}
-                  className="w-full truncate rounded-xl border border-border bg-surface-2 px-3 py-2.5 font-mono text-xs text-muted"
-                />
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Access Token
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                readOnly={readonly || !editando}
+                type={readonly ? 'text' : verToken ? 'text' : 'password'}
+                value={readonly ? 'Token salvo na Vercel (oculto)' : bm.token}
+                placeholder="EAAB..."
+                onChange={(e) => onChange({ token: e.target.value })}
+                className="w-full truncate rounded-xl border border-border bg-surface-2 px-3 py-2.5 font-mono text-xs text-muted"
+              />
+              {!readonly && (
                 <button
                   onClick={() => setVerToken((v) => !v)}
                   className="shrink-0 rounded-xl border border-border bg-surface-2 p-2.5 text-muted hover:text-foreground"
@@ -276,9 +278,15 @@ function BMCard({
                 >
                   {verToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
-              </div>
+              )}
             </div>
-          )}
+            {readonly && (
+              <p className="mt-1.5 text-xs text-muted">
+                O token existe e esta ativo no servidor. Para substituir, envie o novo token e eu atualizo
+                a Vercel sem expor a credencial no navegador.
+              </p>
+            )}
+          </div>
 
           {/* Ad Accounts */}
           <div>
