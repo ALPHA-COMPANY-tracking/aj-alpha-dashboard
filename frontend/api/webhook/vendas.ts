@@ -55,12 +55,20 @@ function tokenValido(req: VercelRequest): boolean {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (!tokenValido(req)) {
+    return res.status(401).json({ error: 'token invalido' })
+  }
+
+  if (req.method === 'GET' || req.method === 'HEAD') {
+    return res.status(200).json({ ok: true, validation: true })
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'metodo nao permitido' })
   }
 
-  if (!tokenValido(req)) {
-    return res.status(401).json({ error: 'token invalido' })
+  if (!req.body || Object.keys(req.body).length === 0) {
+    return res.status(200).json({ ok: true, validation: true })
   }
 
   const parsed = PostbackSchema.safeParse(req.body)
