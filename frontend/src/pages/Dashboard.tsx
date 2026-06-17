@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   DollarSign,
   ShoppingCart,
@@ -40,6 +40,7 @@ export function Dashboard() {
 
   const [reloadKey, setReloadKey] = useState(0)
   const [syncingMeta, setSyncingMeta] = useState(false)
+  const syncInFlight = useRef(false)
   const [lastSync, setLastSync] = useState(() => new Date(Date.now() - 4 * 60 * 1000))
 
   const range = useMemo(
@@ -57,7 +58,9 @@ export function Dashboard() {
     reloadKey,
   )
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
+    if (syncInFlight.current) return
+    syncInFlight.current = true
     setSyncingMeta(true)
     try {
       await syncMetaNow()
@@ -67,8 +70,18 @@ export function Dashboard() {
       setReloadKey((k) => k + 1)
       setLastSync(new Date())
       setSyncingMeta(false)
+      syncInFlight.current = false
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    void refresh()
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void refresh()
+    }, 5 * 60 * 1000)
+
+    return () => window.clearInterval(interval)
+  }, [refresh])
 
   return (
     <div className="space-y-6">
