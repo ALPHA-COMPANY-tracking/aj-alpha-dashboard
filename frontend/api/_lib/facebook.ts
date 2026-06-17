@@ -23,15 +23,6 @@ function normalizeAccountId(accountId: string) {
   return trimmed.startsWith('act_') ? trimmed : `act_${trimmed}`
 }
 
-function uniqueAccounts(accounts: MetaAdAccountConfig[]) {
-  const seen = new Set<string>()
-  return accounts.filter((account) => {
-    if (seen.has(account.accountId)) return false
-    seen.add(account.accountId)
-    return true
-  })
-}
-
 function loadMetaAccounts(): MetaAdAccountConfig[] {
   const chunks = [
     process.env.META_AD_ACCOUNTS_JSON_1,
@@ -52,15 +43,13 @@ function loadMetaAccounts(): MetaAdAccountConfig[] {
       adAccountId?: string
     }>
 
-    return uniqueAccounts(
-      parsed
-        .map((item) => ({
-          bmName: item.bmName ?? item.name ?? 'BM Meta',
-          token: item.token ?? item.accessToken ?? '',
-          accountId: normalizeAccountId(item.accountId ?? item.adAccountId ?? ''),
-        }))
-        .filter((item) => item.token && item.accountId),
-    )
+    return parsed
+      .map((item) => ({
+        bmName: item.bmName ?? item.name ?? 'BM Meta',
+        token: item.token ?? item.accessToken ?? '',
+        accountId: normalizeAccountId(item.accountId ?? item.adAccountId ?? ''),
+      }))
+      .filter((item) => item.token && item.accountId)
   }
 
   const token = process.env.FB_ACCESS_TOKEN
@@ -127,15 +116,19 @@ export async function syncFacebookSpend(days = 7) {
   const untilISO = until.toISOString().slice(0, 10)
 
   const spendByDate = new Map<string, number>()
+  const syncedAccountIds = new Set<string>()
   let syncedRows = 0
   const failedAccounts: Array<{ bmName: string; accountId: string; error: string }> = []
 
   for (const account of accounts) {
+    if (syncedAccountIds.has(account.accountId)) continue
+
     let rows: InsightRow[] = []
 
     try {
       rows = await fetchAccountSpend(account, version, sinceISO, untilISO)
       syncedRows += rows.length
+      syncedAccountIds.add(account.accountId)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'erro desconhecido'
       console.error('[meta-sync] falha na conta', {
@@ -178,6 +171,7 @@ export async function syncFacebookSpend(days = 7) {
       accountId: account.accountId,
     })),
     syncedAccounts: accounts.length,
+    syncedUniqueAccounts: syncedAccountIds.size,
     failedAccounts,
     syncedRows,
     syncedDays: spendByDate.size,
