@@ -2,8 +2,6 @@ import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
   CalendarDays,
-  Wallet,
-  ImagePlay,
   Settings,
   LogOut,
   X,
@@ -14,8 +12,6 @@ import { useAuth } from '../../context/AuthContext'
 const NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/dados-diarios', label: 'Dados Diários', icon: CalendarDays },
-  { to: '/gastos', label: 'Gastos Operacionais', icon: Wallet },
-  { to: '/criativos', label: 'Planilha de Criativos', icon: ImagePlay },
   { to: '/configuracoes', label: 'Configurações', icon: Settings },
 ]
 
