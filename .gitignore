@@ -10,6 +10,7 @@ backend/dist
 .env
 *.env
 !*.env.example
+.deploy-secrets.tmp
 
 # Logs
 *.log

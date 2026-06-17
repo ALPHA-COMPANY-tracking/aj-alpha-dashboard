@@ -1,11 +1,11 @@
 import type { DashboardMetrics, ChartData } from '../data/metrics'
 
-// URL do backend. Se VITE_API_URL não estiver definida, o app usa dados mock.
+// URL da API. Na Vercel, vazio significa "mesmo dominio".
 const RAW = import.meta.env.VITE_API_URL as string | undefined
 const API = RAW ? RAW.replace(/\/$/, '') : ''
 
-/** true quando há um backend configurado (usa dados reais). */
-export const apiEnabled = Boolean(API)
+/** Em producao tenta usar dados reais; em dev sem VITE_API_URL usa mock. */
+export const apiEnabled = Boolean(API) || import.meta.env.PROD
 
 export interface DashboardResponse {
   metrics: DashboardMetrics
