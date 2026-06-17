@@ -14,6 +14,10 @@ export interface DashboardMetrics {
   taxaConversao: number
   cpaMedio: number
   investimentoTotal: number
+  faturamentoPayt: number
+  faturamentoPaytProdutor: number
+  faturamentoPaytAfiliado: number
+  faturamentoLuminar: number
 }
 
 export interface ChartData {
@@ -69,7 +73,7 @@ async function computeMetrics(
   const [salesRes, leadsRes, dailyRes, expensesRes] = await Promise.all([
     supabase
       .from('sales')
-      .select('valor')
+      .select('valor, gateway, papel')
       .eq('tipo', 'venda')
       .gte('data_hora', iso(from))
       .lte('data_hora', iso(to)),
@@ -99,6 +103,22 @@ async function computeMetrics(
     vendas.reduce((acc, sale) => acc + Number(sale.valor ?? 0), 0),
   )
   const totalVendas = vendas.length
+
+  // Faturamento por plataforma e papel.
+  const paytVendas = vendas.filter((s) => (s.gateway ?? 'payt') === 'payt')
+  const luminarVendas = vendas.filter((s) => s.gateway === 'luminar-pay')
+  const faturamentoPayt = round2(
+    paytVendas.reduce((acc, s) => acc + Number(s.valor ?? 0), 0),
+  )
+  const faturamentoPaytAfiliado = round2(
+    paytVendas
+      .filter((s) => s.papel === 'afiliado')
+      .reduce((acc, s) => acc + Number(s.valor ?? 0), 0),
+  )
+  const faturamentoPaytProdutor = round2(faturamentoPayt - faturamentoPaytAfiliado)
+  const faturamentoLuminar = round2(
+    luminarVendas.reduce((acc, s) => acc + Number(s.valor ?? 0), 0),
+  )
   const leads = leadsRes.count ?? 0
   const gastoAnuncios = round2(
     (dailyRes.data ?? []).reduce(
@@ -133,6 +153,10 @@ async function computeMetrics(
     taxaConversao: safeDiv(totalVendas, leads) * 100,
     cpaMedio: safeDiv(gastoAnuncios, totalVendas),
     investimentoTotal,
+    faturamentoPayt,
+    faturamentoPaytProdutor,
+    faturamentoPaytAfiliado,
+    faturamentoLuminar,
   }
 }
 

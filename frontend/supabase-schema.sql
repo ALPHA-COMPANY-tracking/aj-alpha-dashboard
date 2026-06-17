@@ -21,11 +21,15 @@ create table if not exists public.sales (
   criativo_id text,
   origem text,
   gateway text default 'payt',
+  papel text default 'produtor',
   tipo text not null default 'venda',
   dia_semana integer not null,
   hora integer not null,
   created_at timestamptz not null default now()
 );
+
+-- Para bancos já criados antes desta coluna existir:
+alter table public.sales add column if not exists papel text default 'produtor';
 
 create index if not exists sales_data_hora_idx on public.sales (data_hora);
 

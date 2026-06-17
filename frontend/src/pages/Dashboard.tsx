@@ -4,6 +4,8 @@ import {
   Megaphone,
   ShoppingCart,
   TrendingUp,
+  Store,
+  Wallet,
 } from 'lucide-react'
 import { MetricCard } from '../components/dashboard/MetricCard'
 import { Card } from '../components/ui/Card'
@@ -155,6 +157,71 @@ export function Dashboard() {
             />
           </div>
         </Card>
+      </div>
+
+      {/* Vendas por plataforma */}
+      <div>
+        <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-muted">
+          Vendas por Plataforma
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Payt: separação produtor x afiliado */}
+          <Card className="p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="text-sm font-semibold text-foreground">Payt</div>
+                <div className="text-xs text-muted">Faturamento do dia</div>
+              </div>
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-accent-soft text-accent ring-1 ring-accent/20">
+                <Store className="h-[18px] w-[18px]" />
+              </div>
+            </div>
+            {loading ? (
+              <Skeleton className="mt-4 h-8 w-32" />
+            ) : (
+              <div className="mt-3 text-2xl font-bold tracking-tight text-foreground">
+                {formatBRL(metrics.faturamentoPayt)}
+              </div>
+            )}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+                <div className="text-[11px] text-muted">Produtor</div>
+                <div className="text-sm font-semibold text-foreground">
+                  {formatBRL(metrics.faturamentoPaytProdutor)}
+                </div>
+              </div>
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+                <div className="text-[11px] text-muted">Afiliado</div>
+                <div className="text-sm font-semibold text-foreground">
+                  {formatBRL(metrics.faturamentoPaytAfiliado)}
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Luminar Pay */}
+          <Card className="p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="text-sm font-semibold text-foreground">Luminar Pay</div>
+                <div className="text-xs text-muted">Faturamento do dia</div>
+              </div>
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-accent-gradient text-white shadow-[0_8px_20px_-8px_rgba(139,92,246,0.8)]">
+                <Wallet className="h-[18px] w-[18px]" />
+              </div>
+            </div>
+            {loading ? (
+              <Skeleton className="mt-4 h-8 w-32" />
+            ) : (
+              <div className="mt-3 text-2xl font-bold tracking-tight text-foreground">
+                {formatBRL(metrics.faturamentoLuminar)}
+              </div>
+            )}
+            <div className="mt-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-xs text-muted">
+              Total recebido pela Luminar Pay no período.
+            </div>
+          </Card>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

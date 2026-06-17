@@ -20,6 +20,11 @@ export interface DashboardMetrics {
   taxaConversao: number // em %
   cpaMedio: number
   investimentoTotal: number
+  // Faturamento por plataforma (do dia/período)
+  faturamentoPayt: number
+  faturamentoPaytProdutor: number
+  faturamentoPaytAfiliado: number
+  faturamentoLuminar: number
 }
 
 export interface ChartData {
@@ -134,6 +139,17 @@ export function computeMetrics(range: DateRange, settings: Settings): DashboardM
   const gastoAnuncios = adSpendInRange(range)
   const gastosOperacionais = operationalInRange(range)
 
+  // Faturamento por plataforma (Payt x Luminar Pay) e papel (produtor x afiliado).
+  const round = (n: number) => Math.round(n * 100) / 100
+  const paytVendas = vendas.filter((s) => (s.gateway ?? 'payt') === 'payt')
+  const luminarVendas = vendas.filter((s) => s.gateway === 'luminar-pay')
+  const faturamentoPayt = round(paytVendas.reduce((acc, s) => acc + s.valor, 0))
+  const faturamentoPaytAfiliado = round(
+    paytVendas.filter((s) => s.papel === 'afiliado').reduce((acc, s) => acc + s.valor, 0),
+  )
+  const faturamentoPaytProdutor = round(faturamentoPayt - faturamentoPaytAfiliado)
+  const faturamentoLuminar = round(luminarVendas.reduce((acc, s) => acc + s.valor, 0))
+
   const imposto = settings.impostoAtivo
     ? Math.round(gastoAnuncios * (settings.aliquotaImposto / 100) * 100) / 100
     : 0
@@ -156,6 +172,10 @@ export function computeMetrics(range: DateRange, settings: Settings): DashboardM
     taxaConversao: safeDiv(totalVendas, leads) * 100,
     cpaMedio: safeDiv(gastoAnuncios, totalVendas),
     investimentoTotal,
+    faturamentoPayt,
+    faturamentoPaytProdutor,
+    faturamentoPaytAfiliado,
+    faturamentoLuminar,
   }
 }
 

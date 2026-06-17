@@ -1,4 +1,6 @@
 export type SaleType = 'venda' | 'lead'
+export type Gateway = 'payt' | 'luminar-pay'
+export type Papel = 'produtor' | 'afiliado'
 
 export interface Sale {
   id: string
@@ -7,6 +9,8 @@ export interface Sale {
   criativoId?: string
   origem?: string
   tipo: SaleType
+  gateway?: Gateway
+  papel?: Papel // produtor x afiliado (relevante para a Payt)
 }
 
 export interface OperationalExpense {

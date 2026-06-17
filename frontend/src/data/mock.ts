@@ -45,6 +45,7 @@ function buildSales(): Sale[] {
       const minute = Math.floor(rand() * 60)
       const d = new Date(base)
       d.setHours(hour, minute, 0, 0)
+      const ehPayt = rand() < 0.6
       sales.push({
         id: `sale-${dayOffset}-${i}`,
         valor: [67, 97, 127, 197, 247][Math.floor(rand() * 5)],
@@ -52,6 +53,8 @@ function buildSales(): Sale[] {
         criativoId: CRIATIVOS[Math.floor(rand() * CRIATIVOS.length)],
         origem: ORIGENS[Math.floor(rand() * ORIGENS.length)],
         tipo: 'venda',
+        gateway: ehPayt ? 'payt' : 'luminar-pay',
+        papel: ehPayt && rand() < 0.35 ? 'afiliado' : 'produtor',
       })
     }
 
