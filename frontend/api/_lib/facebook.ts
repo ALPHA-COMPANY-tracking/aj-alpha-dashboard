@@ -23,8 +23,24 @@ function normalizeAccountId(accountId: string) {
   return trimmed.startsWith('act_') ? trimmed : `act_${trimmed}`
 }
 
+function uniqueAccounts(accounts: MetaAdAccountConfig[]) {
+  const seen = new Set<string>()
+  return accounts.filter((account) => {
+    if (seen.has(account.accountId)) return false
+    seen.add(account.accountId)
+    return true
+  })
+}
+
 function loadMetaAccounts(): MetaAdAccountConfig[] {
-  const raw = process.env.META_AD_ACCOUNTS_JSON
+  const chunks = [
+    process.env.META_AD_ACCOUNTS_JSON_1,
+    process.env.META_AD_ACCOUNTS_JSON_2,
+    process.env.META_AD_ACCOUNTS_JSON_3,
+    process.env.META_AD_ACCOUNTS_JSON_4,
+    process.env.META_AD_ACCOUNTS_JSON_5,
+  ].filter((chunk): chunk is string => Boolean(chunk))
+  const raw = chunks.length > 0 ? chunks.join('') : process.env.META_AD_ACCOUNTS_JSON
 
   if (raw) {
     const parsed = JSON.parse(raw) as Array<{
@@ -36,13 +52,15 @@ function loadMetaAccounts(): MetaAdAccountConfig[] {
       adAccountId?: string
     }>
 
-    return parsed
-      .map((item) => ({
-        bmName: item.bmName ?? item.name ?? 'BM Meta',
-        token: item.token ?? item.accessToken ?? '',
-        accountId: normalizeAccountId(item.accountId ?? item.adAccountId ?? ''),
-      }))
-      .filter((item) => item.token && item.accountId)
+    return uniqueAccounts(
+      parsed
+        .map((item) => ({
+          bmName: item.bmName ?? item.name ?? 'BM Meta',
+          token: item.token ?? item.accessToken ?? '',
+          accountId: normalizeAccountId(item.accountId ?? item.adAccountId ?? ''),
+        }))
+        .filter((item) => item.token && item.accountId),
+    )
   }
 
   const token = process.env.FB_ACCESS_TOKEN
@@ -110,10 +128,28 @@ export async function syncFacebookSpend(days = 7) {
 
   const spendByDate = new Map<string, number>()
   let syncedRows = 0
+  const failedAccounts: Array<{ bmName: string; accountId: string; error: string }> = []
 
   for (const account of accounts) {
-    const rows = await fetchAccountSpend(account, version, sinceISO, untilISO)
-    syncedRows += rows.length
+    let rows: InsightRow[] = []
+
+    try {
+      rows = await fetchAccountSpend(account, version, sinceISO, untilISO)
+      syncedRows += rows.length
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'erro desconhecido'
+      console.error('[meta-sync] falha na conta', {
+        bmName: account.bmName,
+        accountId: account.accountId,
+        error: message,
+      })
+      failedAccounts.push({
+        bmName: account.bmName,
+        accountId: account.accountId,
+        error: message,
+      })
+      continue
+    }
 
     for (const row of rows) {
       const current = spendByDate.get(row.date_start) ?? 0
@@ -142,6 +178,7 @@ export async function syncFacebookSpend(days = 7) {
       accountId: account.accountId,
     })),
     syncedAccounts: accounts.length,
+    failedAccounts,
     syncedRows,
     syncedDays: spendByDate.size,
   }
