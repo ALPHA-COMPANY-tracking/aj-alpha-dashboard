@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { syncFacebookSpend } from '../_lib/facebook'
+import { syncFacebookSpend } from '../_lib/facebook.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const cronSecret = process.env.CRON_SECRET

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getDashboard } from './_lib/dashboard'
+import { getDashboard } from './_lib/dashboard.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
