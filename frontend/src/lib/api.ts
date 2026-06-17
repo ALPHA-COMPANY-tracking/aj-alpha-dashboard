@@ -50,3 +50,15 @@ export async function fetchMetaAccounts(): Promise<MetaAccountsResponse> {
   if (!res.ok) throw new Error(`API respondeu ${res.status}`)
   return res.json() as Promise<MetaAccountsResponse>
 }
+
+export async function syncMetaNow() {
+  const token = import.meta.env.VITE_META_REFRESH_TOKEN as string | undefined
+  if (!token) throw new Error('Token de sincronizacao nao configurado')
+
+  const res = await fetch(`${API}/api/meta-sync?days=1`, {
+    method: 'POST',
+    headers: { 'x-meta-refresh-token': token },
+  })
+  if (!res.ok) throw new Error(`API respondeu ${res.status}`)
+  return res.json() as Promise<{ ok: true }>
+}

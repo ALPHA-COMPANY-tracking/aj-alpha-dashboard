@@ -21,6 +21,7 @@ import { useAuth } from '../context/AuthContext'
 import { pctDelta, resolvePeriod } from '../data/metrics'
 import { useDashboardData } from '../hooks/useDashboardData'
 import { formatBRL, formatNumber } from '../lib/format'
+import { syncMetaNow } from '../lib/api'
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10)
@@ -38,6 +39,7 @@ export function Dashboard() {
   })
 
   const [reloadKey, setReloadKey] = useState(0)
+  const [syncingMeta, setSyncingMeta] = useState(false)
   const [lastSync, setLastSync] = useState(() => new Date(Date.now() - 4 * 60 * 1000))
 
   const range = useMemo(
@@ -55,9 +57,17 @@ export function Dashboard() {
     reloadKey,
   )
 
-  const refresh = () => {
-    setReloadKey((k) => k + 1)
-    setLastSync(new Date())
+  const refresh = async () => {
+    setSyncingMeta(true)
+    try {
+      await syncMetaNow()
+    } catch (err) {
+      console.warn('[dashboard] falha ao sincronizar Meta Ads:', err)
+    } finally {
+      setReloadKey((k) => k + 1)
+      setLastSync(new Date())
+      setSyncingMeta(false)
+    }
   }
 
   return (
@@ -76,7 +86,7 @@ export function Dashboard() {
           <MetaAdsIndicator
             spend={metrics.gastoAnuncios}
             lastSync={lastSync}
-            loading={loading}
+            loading={loading || syncingMeta}
             onRefresh={refresh}
           />
           <DateRangePicker value={picker} onChange={setPicker} />
