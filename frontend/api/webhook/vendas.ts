@@ -74,6 +74,24 @@ function firstAmount(ev: Record<string, unknown>, paths: string[][]): number {
   return 0
 }
 
+function commissionByType(ev: Record<string, unknown>, type: string) {
+  const commissions = ev.commission
+  if (!Array.isArray(commissions)) return null
+
+  const found = commissions.find((item) => {
+    if (!item || typeof item !== 'object') return false
+    const itemType = (item as Record<string, unknown>).type
+    return typeof itemType === 'string' && itemType.toLowerCase() === type
+  })
+
+  return found && typeof found === 'object' ? (found as Record<string, unknown>) : null
+}
+
+function commissionAmount(ev: Record<string, unknown>, type: string) {
+  const commission = commissionByType(ev, type)
+  return commission ? parseAmount(commission.amount) : null
+}
+
 function parseEventDate(value: string | null): Date {
   if (!value) return new Date()
 
@@ -132,6 +150,7 @@ function detectarPapel(
 
   if (affiliateEmail && affiliateEmails.includes(affiliateEmail)) return 'afiliado'
   if (affiliateName) return 'afiliado'
+  if (commissionByType(ev, 'affiliation')) return 'afiliado'
 
   const txt = (v: unknown) => (typeof v === 'string' ? v.toLowerCase() : '')
   const ehAfiliado =
@@ -214,6 +233,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ['transaction', 'total_price'],
     ['total_price'],
   ])
+  const valorRecebido = commissionAmount(eventRecord, 'producer') ?? valor
   const paidAt = firstString(eventRecord, [
     ['transaction', 'paid_at'],
     ['paid_at'],
@@ -258,13 +278,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? detectarPapel(eventRecord, affiliateEmail, affiliateName)
       : 'produtor'
 
-  if (event.test || !isApprovedPayment(eventRecord) || !externalId || valor <= 0) {
+  if (event.test || !isApprovedPayment(eventRecord) || !externalId || valorRecebido <= 0) {
     return res.status(200).json({ ok: true, ignored: true })
   }
 
   const registro = {
     external_id: externalId,
-    valor,
+    valor: valorRecebido,
     data_hora: dataHora.toISOString(),
     origem: event.link?.url ?? null,
     gateway,
@@ -276,7 +296,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     dia_semana: dataHora.getDay(),
     hora: dataHora.getHours(),
   }
-  const opts = { onConflict: 'external_id', ignoreDuplicates: true } as const
+  const opts = { onConflict: 'external_id' } as const
 
   try {
     let { error } = await supabase.from('sales').upsert(registro, opts)
