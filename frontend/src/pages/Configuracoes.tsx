@@ -21,6 +21,7 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Toggle } from '../components/ui/Toggle'
 import { cn } from '../lib/utils'
+import { fetchMetaAccounts, type MetaAccountsResponse } from '../lib/api'
 
 // ---------------------------------------------------------------------------
 // Persistência simples em localStorage.
@@ -48,7 +49,7 @@ function genKey(): string {
     .join('')
 }
 
-type TokenStatus = 'nao_verificado' | 'valido' | 'invalido'
+type TokenStatus = 'nao_verificado' | 'valido' | 'invalido' | 'configurado'
 
 interface AdAccount {
   id: string
@@ -169,10 +170,12 @@ function BMCard({
   bm,
   onChange,
   onRemove,
+  readonly = false,
 }: {
   bm: BM
   onChange: (patch: Partial<BM>) => void
   onRemove: () => void
+  readonly?: boolean
 }) {
   const [aberto, setAberto] = useState(false)
   const [editando, setEditando] = useState(false)
@@ -204,10 +207,11 @@ function BMCard({
           </Badge>
         )}
         {bm.tokenStatus === 'valido' && <Badge tone="positive">Válido</Badge>}
+        {bm.tokenStatus === 'configurado' && <Badge tone="positive">Sincronizada</Badge>}
         {bm.tokenStatus === 'nao_verificado' && <Badge tone="muted">Não verificado</Badge>}
         <RefreshCw className="h-4 w-4 text-muted" />
         <div className="ml-auto flex items-center gap-2">
-          <Toggle checked={bm.ativa} onChange={(v) => onChange({ ativa: v })} />
+          {!readonly && <Toggle checked={bm.ativa} onChange={(v) => onChange({ ativa: v })} />}
           <button
             onClick={() => setAberto((o) => !o)}
             className="rounded-lg p-1.5 text-muted hover:text-foreground"
@@ -253,27 +257,28 @@ function BMCard({
             />
           </div>
 
-          {/* Access Token */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-foreground">Access Token</label>
-            <div className="flex items-center gap-2">
-              <input
-                readOnly={!editando}
-                type={verToken ? 'text' : 'password'}
-                value={bm.token}
-                placeholder="EAAB..."
-                onChange={(e) => onChange({ token: e.target.value })}
-                className="w-full truncate rounded-xl border border-border bg-surface-2 px-3 py-2.5 font-mono text-xs text-muted"
-              />
-              <button
-                onClick={() => setVerToken((v) => !v)}
-                className="shrink-0 rounded-xl border border-border bg-surface-2 p-2.5 text-muted hover:text-foreground"
-                title={verToken ? 'Ocultar' : 'Mostrar'}
-              >
-                {verToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
+          {!readonly && (
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-foreground">Access Token</label>
+              <div className="flex items-center gap-2">
+                <input
+                  readOnly={!editando}
+                  type={verToken ? 'text' : 'password'}
+                  value={bm.token}
+                  placeholder="EAAB..."
+                  onChange={(e) => onChange({ token: e.target.value })}
+                  className="w-full truncate rounded-xl border border-border bg-surface-2 px-3 py-2.5 font-mono text-xs text-muted"
+                />
+                <button
+                  onClick={() => setVerToken((v) => !v)}
+                  className="shrink-0 rounded-xl border border-border bg-surface-2 p-2.5 text-muted hover:text-foreground"
+                  title={verToken ? 'Ocultar' : 'Mostrar'}
+                >
+                  {verToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Ad Accounts */}
           <div>
@@ -335,6 +340,7 @@ function BMCard({
           </div>
 
           {/* Ações */}
+          {!readonly && (
           <div className="flex items-center gap-2">
             <button
               onClick={() => setEditando((e) => !e)}
@@ -355,6 +361,7 @@ function BMCard({
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
+          )}
         </div>
       )}
     </div>
@@ -367,14 +374,37 @@ export function Configuracoes() {
   const [metaTab, setMetaTab] = useState<'overview' | 'bms'>('overview')
   const [chave, setChave] = useStored('aj.webhookSecret', genKey())
   const [bms, setBms] = useStored<BM[]>('aj.metaBMs', [])
+  const [metaConfig, setMetaConfig] = useState<MetaAccountsResponse | null>(null)
+  const [metaConfigLoading, setMetaConfigLoading] = useState(false)
   const [mostrarForm, setMostrarForm] = useState(false)
   const [novoBM, setNovoBM] = useState({ nome: '', token: '', contas: '' })
 
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
   const webhookUrl = `${origin}/api/webhook/vendas/${chave}`
 
-  const bmsAtivas = bms.filter((b) => b.ativa).length
-  const totalContas = bms.reduce((acc, b) => acc + b.contas.length, 0)
+  useEffect(() => {
+    setMetaConfigLoading(true)
+    fetchMetaAccounts()
+      .then(setMetaConfig)
+      .catch(() => setMetaConfig(null))
+      .finally(() => setMetaConfigLoading(false))
+  }, [])
+
+  const serverBms: BM[] =
+    metaConfig?.bms.map((bm) => ({
+      id: bm.nome,
+      nome: bm.nome,
+      ativa: true,
+      token: 'Token protegido na Vercel',
+      tokenStatus: 'configurado' as const,
+      contas: bm.contas.map((id) => ({ id, selecionada: true, moeda: 'BRL' as const })),
+    })) ?? []
+  const usandoConfigServidor = serverBms.length > 0
+  const bmsVisiveis = usandoConfigServidor ? serverBms : bms
+  const bmsAtivas = usandoConfigServidor ? serverBms.length : bms.filter((b) => b.ativa).length
+  const totalContas = usandoConfigServidor
+    ? (metaConfig?.uniqueAccounts ?? 0)
+    : bms.reduce((acc, b) => acc + b.contas.length, 0)
 
   const regenerar = () => {
     if (confirm('Gerar uma nova chave? Você precisará atualizar a URL nas plataformas e o SALES_WEBHOOK_SECRET no Vercel.')) {
@@ -559,7 +589,11 @@ export function Configuracoes() {
 
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { v: bms.length, l: 'BMs Configuradas', c: 'text-foreground' },
+                  {
+                    v: usandoConfigServidor ? metaConfig?.totalBMs ?? 0 : bms.length,
+                    l: 'BMs Configuradas',
+                    c: 'text-foreground',
+                  },
                   { v: bmsAtivas, l: 'BMs Ativas', c: 'text-positive' },
                   { v: totalContas, l: 'Ad Accounts', c: 'text-foreground' },
                 ].map((s) => (
@@ -572,7 +606,9 @@ export function Configuracoes() {
 
               <div>
                 <div className="mb-1.5 text-sm font-medium text-foreground">Status da Integração</div>
-                {bmsAtivas > 0 ? (
+                {metaConfigLoading ? (
+                  <Badge tone="muted">Carregando...</Badge>
+                ) : bmsAtivas > 0 ? (
                   <Badge>Conectado ({bmsAtivas} {bmsAtivas === 1 ? 'BM ativa' : 'BMs ativas'})</Badge>
                 ) : (
                   <Badge tone="muted">Não conectado</Badge>
@@ -611,14 +647,29 @@ export function Configuracoes() {
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-semibold">Business Managers</h4>
-                  <p className="text-sm text-muted">Gerencie suas BMs e seus respectivos Ad Accounts.</p>
+                  <p className="text-sm text-muted">
+                    {usandoConfigServidor
+                      ? 'BMs sincronizadas pela Vercel. Tokens ficam ocultos por seguranca.'
+                      : 'Gerencie suas BMs e seus respectivos Ad Accounts.'}
+                  </p>
                 </div>
-                <Button variant="primary" onClick={() => setMostrarForm((m) => !m)} className="shrink-0">
-                  <Plus className="h-4 w-4" /> Adicionar BM
-                </Button>
+                {!usandoConfigServidor && (
+                  <Button variant="primary" onClick={() => setMostrarForm((m) => !m)} className="shrink-0">
+                    <Plus className="h-4 w-4" /> Adicionar BM
+                  </Button>
+                )}
               </div>
 
-              {mostrarForm && (
+              {usandoConfigServidor && (
+                <div className="mt-4">
+                  <Callout tone="success" icon={<CircleCheck className="h-5 w-5" />}>
+                    <strong className="text-foreground">Sincronizado:</strong> {metaConfig?.totalBMs} BMs,
+                    {' '}{metaConfig?.uniqueAccounts} contas únicas e {metaConfig?.totalAccounts} entradas totais.
+                  </Callout>
+                </div>
+              )}
+
+              {mostrarForm && !usandoConfigServidor && (
                 <div className="mt-4 space-y-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
                   <input
                     placeholder="Nome da BM (ex.: BM 01 - CONTA PRINCIPAL)"
@@ -646,17 +697,20 @@ export function Configuracoes() {
               )}
 
               <div className="mt-3 space-y-2">
-                {bms.length === 0 && !mostrarForm && (
+                {bmsVisiveis.length === 0 && !mostrarForm && (
                   <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-muted">
                     Nenhuma BM cadastrada. Clique em "Adicionar BM" para começar.
                   </p>
                 )}
-                {bms.map((bm) => (
+                {bmsVisiveis.map((bm) => (
                   <BMCard
                     key={bm.id}
                     bm={bm}
-                    onChange={(patch) => patchBM(bm.id, patch)}
-                    onRemove={() => setBms((prev) => prev.filter((b) => b.id !== bm.id))}
+                    onChange={(patch) => !usandoConfigServidor && patchBM(bm.id, patch)}
+                    onRemove={() =>
+                      !usandoConfigServidor && setBms((prev) => prev.filter((b) => b.id !== bm.id))
+                    }
+                    readonly={usandoConfigServidor}
                   />
                 ))}
               </div>

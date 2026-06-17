@@ -17,6 +17,11 @@ interface MetaAdAccountConfig {
   accountId: string
 }
 
+export interface MetaBMInfo {
+  nome: string
+  contas: string[]
+}
+
 function normalizeAccountId(accountId: string) {
   const trimmed = accountId.trim()
   if (!trimmed) return ''
@@ -63,6 +68,30 @@ function loadMetaAccounts(): MetaAdAccountConfig[] {
       accountId: normalizeAccountId(accountId),
     },
   ]
+}
+
+export function getConfiguredMetaBMs() {
+  const accounts = loadMetaAccounts()
+  const byName = new Map<string, Set<string>>()
+  const uniqueAccounts = new Set<string>()
+
+  for (const account of accounts) {
+    if (!byName.has(account.bmName)) byName.set(account.bmName, new Set())
+    byName.get(account.bmName)?.add(account.accountId)
+    uniqueAccounts.add(account.accountId)
+  }
+
+  const bms: MetaBMInfo[] = Array.from(byName.entries()).map(([nome, contas]) => ({
+    nome,
+    contas: Array.from(contas),
+  }))
+
+  return {
+    bms,
+    totalBMs: bms.length,
+    totalAccounts: accounts.length,
+    uniqueAccounts: uniqueAccounts.size,
+  }
 }
 
 async function fetchAccountSpend(

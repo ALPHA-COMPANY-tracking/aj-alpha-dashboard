@@ -14,6 +14,13 @@ export interface DashboardResponse {
   charts: ChartData
 }
 
+export interface MetaAccountsResponse {
+  bms: Array<{ nome: string; contas: string[] }>
+  totalBMs: number
+  totalAccounts: number
+  uniqueAccounts: number
+}
+
 export async function fetchDashboard(params: {
   from: Date
   to: Date
@@ -36,4 +43,10 @@ export async function fetchDaily(days = 14): Promise<DailyMetric[]> {
   if (!res.ok) throw new Error(`API respondeu ${res.status}`)
   const json = (await res.json()) as { rows: DailyMetric[] }
   return json.rows
+}
+
+export async function fetchMetaAccounts(): Promise<MetaAccountsResponse> {
+  const res = await fetch(`${API}/api/meta-accounts`)
+  if (!res.ok) throw new Error(`API respondeu ${res.status}`)
+  return res.json() as Promise<MetaAccountsResponse>
 }
