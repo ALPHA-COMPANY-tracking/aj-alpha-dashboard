@@ -39,9 +39,9 @@ export function Dashboard() {
   })
 
   const [reloadKey, setReloadKey] = useState(0)
-  const [syncingMeta, setSyncingMeta] = useState(false)
+  const [syncingMeta, setSyncingMeta] = useState(true)
   const syncInFlight = useRef(false)
-  const [lastSync, setLastSync] = useState(() => new Date(Date.now() - 4 * 60 * 1000))
+  const [lastSync, setLastSync] = useState<Date | null>(null)
 
   const range = useMemo(
     () =>

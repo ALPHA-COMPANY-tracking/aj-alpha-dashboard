@@ -9,7 +9,7 @@ export function MetaAdsIndicator({
   onRefresh,
 }: {
   spend: number
-  lastSync: Date
+  lastSync: Date | null
   loading: boolean
   onRefresh: () => void
 }) {
@@ -23,7 +23,11 @@ export function MetaAdsIndicator({
           Meta Ads: {formatBRL(spend)}
         </div>
         <div className="text-[11px] text-muted">
-          Atualizado {timeAgo(lastSync)}
+          {loading
+            ? 'Sincronizando...'
+            : lastSync
+              ? `Atualizado ${timeAgo(lastSync)}`
+              : 'Aguardando sincronização'}
         </div>
       </div>
       <button
