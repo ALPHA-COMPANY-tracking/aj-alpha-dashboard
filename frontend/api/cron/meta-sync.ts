@@ -10,7 +10,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const result = await syncFacebookSpend(7)
+    const days = Math.min(Math.max(Number(req.query.days ?? 7), 1), 90)
+    const result = await syncFacebookSpend(days)
     return res.status(200).json({ ok: true, ...result })
   } catch (err) {
     console.error('[cron/meta-sync]', err)
