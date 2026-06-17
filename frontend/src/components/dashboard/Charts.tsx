@@ -15,15 +15,15 @@ import { Card, CardHeader } from '../ui/Card'
 import { Skeleton } from '../ui/Skeleton'
 import type { ChartData } from '../../data/metrics'
 
-const VIOLET = '#a855f7'
-const INDIGO = '#6366f1'
+const VIOLET = '#f5d061'
+const INDIGO = '#b8860b'
 const GRID = 'rgba(255,255,255,0.06)'
-const AXIS = '#8b97bd'
+const AXIS = '#b1a487'
 
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0b1020]/95 px-3 py-2 text-xs shadow-xl backdrop-blur">
+    <div className="rounded-xl border border-white/10 bg-[#15130d]/95 px-3 py-2 text-xs shadow-xl backdrop-blur">
       <div className="font-medium text-foreground">{label}</div>
       <div className="font-semibold text-violet2">{payload[0].value} vendas</div>
     </div>
@@ -79,7 +79,7 @@ export function SalesByWeekdayChart({
           <CartesianGrid strokeDasharray="3 3" stroke={GRID} vertical={false} />
           <XAxis dataKey="dia" stroke={AXIS} fontSize={12} tickLine={false} axisLine={false} />
           <YAxis stroke={AXIS} fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-          <Tooltip cursor={{ fill: 'rgba(139,92,246,0.08)' }} content={<ChartTooltip />} />
+          <Tooltip cursor={{ fill: 'rgba(230,178,58,0.08)' }} content={<ChartTooltip />} />
           <Bar dataKey="vendas" radius={[8, 8, 0, 0]} maxBarSize={46}>
             {data.map((_, i) => (
               <Cell key={i} fill={i === maxIdx ? 'url(#barActive)' : 'url(#barIdle)'} />

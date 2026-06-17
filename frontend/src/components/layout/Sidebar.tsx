@@ -37,14 +37,14 @@ export function Sidebar({
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/[0.06] bg-[#0b1020]/80 backdrop-blur-2xl transition-transform lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/[0.06] bg-[#15130d]/80 backdrop-blur-2xl transition-transform lg:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
         {/* Marca */}
         <div className="flex items-center justify-between px-5 py-5">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent-gradient text-white shadow-[0_8px_20px_-6px_rgba(139,92,246,0.8)]">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent-gradient text-white shadow-[0_8px_20px_-6px_rgba(230,178,58,0.8)]">
               <span className="text-base font-black">A</span>
             </div>
             <div className="leading-tight">

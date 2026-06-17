@@ -5,19 +5,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#070a16',
-        surface: '#101728',
-        'surface-2': '#18213a',
-        border: '#232f4d',
-        muted: '#8b97bd',
-        foreground: '#eef1fb',
-        // Acento principal (violeta/índigo) — inspirado na referência.
+        background: '#0b0a07',
+        surface: '#15130d',
+        'surface-2': '#201c12',
+        border: '#332b1b',
+        muted: '#b1a487',
+        foreground: '#f5efe2',
+        // Acento dourado.
         accent: {
-          DEFAULT: '#8b5cf6',
-          soft: 'rgba(139, 92, 246, 0.14)',
+          DEFAULT: '#e6b23a',
+          soft: 'rgba(230, 178, 58, 0.14)',
         },
-        indigo2: '#6366f1',
-        violet2: '#a855f7',
+        indigo2: '#b8860b', // dourado escuro (gradiente)
+        violet2: '#f5d061', // dourado claro (destaques)
         positive: '#34d399',
         negative: '#fb7185',
         warning: '#fbbf24',
@@ -31,12 +31,12 @@ export default {
         sans: ['Inter', 'system-ui', 'Segoe UI', 'sans-serif'],
       },
       backgroundImage: {
-        'accent-gradient': 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)',
+        'accent-gradient': 'linear-gradient(135deg, #b8860b 0%, #e6b23a 50%, #f5d061 100%)',
         'accent-gradient-soft':
-          'linear-gradient(135deg, rgba(99,102,241,0.25) 0%, rgba(168,85,247,0.25) 100%)',
+          'linear-gradient(135deg, rgba(184,134,11,0.25) 0%, rgba(245,208,97,0.25) 100%)',
       },
       boxShadow: {
-        glow: '0 0 0 1px rgba(139,92,246,0.25), 0 12px 40px -12px rgba(139,92,246,0.45)',
+        glow: '0 0 0 1px rgba(230,178,58,0.25), 0 12px 40px -12px rgba(230,178,58,0.45)',
         card: '0 18px 40px -24px rgba(0, 0, 0, 0.8)',
       },
     },

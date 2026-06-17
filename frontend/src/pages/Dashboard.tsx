@@ -114,7 +114,7 @@ export function Dashboard() {
             <span className="text-[11px] font-semibold uppercase tracking-widest text-muted">
               Investido (Total)
             </span>
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-accent-gradient text-white shadow-[0_8px_20px_-8px_rgba(139,92,246,0.8)]">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-accent-gradient text-white shadow-[0_8px_20px_-8px_rgba(230,178,58,0.8)]">
               <DollarSign className="h-[18px] w-[18px]" />
             </div>
           </div>
@@ -197,7 +197,7 @@ export function Dashboard() {
                 <div className="text-sm font-semibold text-foreground">Luminar Pay</div>
                 <div className="text-xs text-muted">Faturamento do dia</div>
               </div>
-              <div className="grid h-9 w-9 place-items-center rounded-xl bg-accent-gradient text-white shadow-[0_8px_20px_-8px_rgba(139,92,246,0.8)]">
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-accent-gradient text-white shadow-[0_8px_20px_-8px_rgba(230,178,58,0.8)]">
                 <Wallet className="h-[18px] w-[18px]" />
               </div>
             </div>

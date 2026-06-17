@@ -9,7 +9,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const styles: Record<Variant, string> = {
   primary:
-    'bg-accent-gradient text-white font-semibold shadow-[0_8px_24px_-8px_rgba(139,92,246,0.7)] hover:brightness-110',
+    'bg-accent-gradient text-[#1a1303] font-semibold shadow-[0_8px_24px_-8px_rgba(230,178,58,0.7)] hover:brightness-110',
   ghost: 'text-muted hover:text-foreground hover:bg-surface-2',
   outline: 'border border-white/10 bg-white/[0.03] text-foreground hover:bg-white/[0.06]',
   danger: 'text-negative hover:bg-negative/10',

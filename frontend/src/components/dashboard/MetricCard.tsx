@@ -19,7 +19,7 @@ const toneIcon: Record<Tone, string> = {
   default: 'bg-white/[0.05] text-muted ring-1 ring-white/10',
   positive: 'bg-positive/10 text-positive ring-1 ring-positive/20',
   negative: 'bg-negative/10 text-negative ring-1 ring-negative/20',
-  accent: 'bg-accent-gradient text-white shadow-[0_8px_20px_-8px_rgba(139,92,246,0.8)]',
+  accent: 'bg-accent-gradient text-white shadow-[0_8px_20px_-8px_rgba(230,178,58,0.8)]',
 }
 
 export interface DeltaInfo {
