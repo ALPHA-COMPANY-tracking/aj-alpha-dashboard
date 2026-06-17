@@ -63,9 +63,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const dataHora = new Date(paidAt)
   const gateway = event.integration_key === 'luminar-pay' ? 'luminar-pay' : 'payt'
 
-  res.status(200).json({ ok: true })
-
-  if (event.test || status !== 'paid' || !externalId) return
+  if (event.test || status !== 'paid' || !externalId) {
+    return res.status(200).json({ ok: true, ignored: true })
+  }
 
   try {
     const { error } = await supabase.from('sales').upsert(
@@ -82,7 +82,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       { onConflict: 'external_id', ignoreDuplicates: true },
     )
     if (error) throw error
+    return res.status(200).json({ ok: true })
   } catch (err) {
     console.error('[webhook/vendas] erro ao gravar venda', err)
+    return res.status(500).json({ error: 'falha ao gravar venda' })
   }
 }
