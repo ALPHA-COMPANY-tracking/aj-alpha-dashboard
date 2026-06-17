@@ -56,6 +56,7 @@ export function MetricCard({
   loading = false,
   action,
   delta,
+  className,
 }: {
   label: string
   value: string
@@ -65,9 +66,10 @@ export function MetricCard({
   loading?: boolean
   action?: ReactNode
   delta?: DeltaInfo
+  className?: string
 }) {
   return (
-    <Card className="group relative overflow-hidden p-5 hover:border-white/[0.12]">
+    <Card className={cn('group relative overflow-hidden p-5 hover:border-white/[0.12]', className)}>
       {/* brilho sutil no hover */}
       <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-accent/10 opacity-0 blur-2xl transition-opacity group-hover:opacity-100" />
 
