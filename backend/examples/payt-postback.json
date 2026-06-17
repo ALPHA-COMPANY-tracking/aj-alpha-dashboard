@@ -1,0 +1,42 @@
+{
+  "integration_key": "luminar-pay",
+  "transaction_id": "cmpoj1ddi0001l5046ls5mk77",
+  "seller_id": "luminar-pay",
+  "test": false,
+  "type": "order",
+  "status": "paid",
+  "tangible": true,
+  "customer": {
+    "name": "Antonio Henrique Neto",
+    "email": "cliente@email.com",
+    "fake_email": false,
+    "phone": "83991692533",
+    "doc": "12345678900",
+    "code": "cmpoj1ddi0001l5046ls5mk77",
+    "billing_address": {
+      "zipcode": "58000000",
+      "street": "Rua Exemplo",
+      "street_number": "100",
+      "complement": "Apto 2",
+      "district": "Centro",
+      "city": "João Pessoa",
+      "estate": "PB",
+      "country": "BR"
+    }
+  },
+  "transaction": {
+    "total_price": 68500,
+    "price_without_installments": 68500,
+    "net_amount": 66290,
+    "net_profit": 41290,
+    "installments": 1,
+    "payment_method": "pix",
+    "payment_status": "paid",
+    "paid_at": "2026-05-27T19:13:15.275Z"
+  },
+  "link": {
+    "url": "https://checkout.empresa.com.br/checkout/kit-6-meses"
+  },
+  "started_at": "2026-05-26T15:44:00.000Z",
+  "updated_at": "2026-05-27T19:13:15.275Z"
+}

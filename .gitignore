@@ -1,0 +1,20 @@
+# Dependências
+node_modules
+
+# Build
+dist
+frontend/dist
+backend/dist
+
+# Variáveis de ambiente / segredos
+.env
+*.env
+!*.env.example
+
+# Logs
+*.log
+frontend/dev.log
+
+# Editor / SO
+.DS_Store
+Thumbs.db
