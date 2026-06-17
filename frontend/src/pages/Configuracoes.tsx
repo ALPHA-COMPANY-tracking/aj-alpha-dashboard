@@ -8,9 +8,13 @@ import {
   RefreshCw,
   Info,
   CircleCheck,
+  CircleAlert,
   Plus,
   ChevronDown,
   Trash2,
+  Eye,
+  EyeOff,
+  ExternalLink,
 } from 'lucide-react'
 import { PageHeader } from '../components/layout/PageHeader'
 import { Card } from '../components/ui/Card'
@@ -44,13 +48,21 @@ function genKey(): string {
     .join('')
 }
 
+type TokenStatus = 'nao_verificado' | 'valido' | 'invalido'
+
+interface AdAccount {
+  id: string
+  selecionada: boolean
+  moeda: 'BRL' | 'USD'
+}
+
 interface BM {
   id: string
   nome: string
   ativa: boolean
-  contas: number
-  total: number
-  verificado: boolean
+  token: string
+  tokenStatus: TokenStatus
+  contas: AdAccount[]
 }
 
 // ---------------------------------------------------------------------------
@@ -125,16 +137,21 @@ function WebhookField({ url }: { url: string }) {
   )
 }
 
-function Badge({ children, tone = 'positive' }: { children: ReactNode; tone?: 'positive' | 'muted' }) {
+function Badge({
+  children,
+  tone = 'positive',
+}: {
+  children: ReactNode
+  tone?: 'positive' | 'muted' | 'negative' | 'cyan'
+}) {
+  const tones = {
+    positive: 'bg-positive/15 text-positive',
+    cyan: 'bg-accent/15 text-accent ring-1 ring-accent/30',
+    muted: 'bg-white/[0.06] text-muted ring-1 ring-white/10',
+    negative: 'bg-negative/10 text-negative ring-1 ring-negative/30',
+  }
   return (
-    <span
-      className={cn(
-        'rounded-full px-2.5 py-0.5 text-[11px] font-medium',
-        tone === 'positive'
-          ? 'bg-positive/15 text-positive'
-          : 'bg-white/[0.06] text-muted ring-1 ring-white/10',
-      )}
-    >
+    <span className={cn('rounded-full px-2.5 py-0.5 text-[11px] font-medium', tones[tone])}>
       {children}
     </span>
   )
@@ -145,49 +162,254 @@ const TABS = [
   { id: 'meta' as const, label: 'Meta Ads', icon: Target },
 ]
 
+// ---------------------------------------------------------------------------
+// Card de uma Business Manager
+// ---------------------------------------------------------------------------
+function BMCard({
+  bm,
+  onChange,
+  onRemove,
+}: {
+  bm: BM
+  onChange: (patch: Partial<BM>) => void
+  onRemove: () => void
+}) {
+  const [aberto, setAberto] = useState(false)
+  const [editando, setEditando] = useState(false)
+  const [verToken, setVerToken] = useState(false)
+  const [novaConta, setNovaConta] = useState('')
+
+  const selecionadas = bm.contas.filter((c) => c.selecionada).length
+
+  const setConta = (id: string, patch: Partial<AdAccount>) =>
+    onChange({ contas: bm.contas.map((c) => (c.id === id ? { ...c, ...patch } : c)) })
+
+  const addConta = () => {
+    const id = novaConta.trim()
+    if (!id) return
+    onChange({ contas: [...bm.contas, { id, selecionada: true, moeda: 'BRL' }] })
+    setNovaConta('')
+  }
+
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+      {/* Cabeçalho */}
+      <div className="flex flex-wrap items-center gap-2 p-3">
+        <span className="font-semibold text-foreground">{bm.nome}</span>
+        {bm.ativa && <Badge tone="cyan">Ativa</Badge>}
+        <Badge tone="muted">{selecionadas}/{bm.contas.length} contas</Badge>
+        {bm.tokenStatus === 'invalido' && (
+          <Badge tone="negative">
+            <span className="inline-flex items-center gap-1"><CircleAlert className="h-3 w-3" /> Inválido</span>
+          </Badge>
+        )}
+        {bm.tokenStatus === 'valido' && <Badge tone="positive">Válido</Badge>}
+        {bm.tokenStatus === 'nao_verificado' && <Badge tone="muted">Não verificado</Badge>}
+        <RefreshCw className="h-4 w-4 text-muted" />
+        <div className="ml-auto flex items-center gap-2">
+          <Toggle checked={bm.ativa} onChange={(v) => onChange({ ativa: v })} />
+          <button
+            onClick={() => setAberto((o) => !o)}
+            className="rounded-lg p-1.5 text-muted hover:text-foreground"
+          >
+            <ChevronDown className={cn('h-4 w-4 transition-transform', aberto && 'rotate-180')} />
+          </button>
+        </div>
+      </div>
+
+      {aberto && (
+        <div className="space-y-4 border-t border-white/[0.06] p-4">
+          {bm.tokenStatus === 'invalido' && (
+            <div className="rounded-2xl border border-negative/40 bg-negative/10 p-4 text-sm">
+              <div className="flex items-center gap-2 font-semibold text-negative">
+                <CircleAlert className="h-4 w-4" /> Token Inválido
+              </div>
+              <p className="mt-1 text-negative/90">
+                Permissões insuficientes. O token precisa das permissões <strong>ads_read</strong>.
+                Reconecte sua conta pelo Facebook Login.
+              </p>
+              <a
+                href="https://business.facebook.com/settings/system-users"
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1 font-medium text-negative underline"
+              >
+                Gerar novo token no Meta Business Suite <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          )}
+
+          {/* Nome */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">Nome da BM</label>
+            <input
+              readOnly={!editando}
+              value={bm.nome}
+              onChange={(e) => onChange({ nome: e.target.value })}
+              className={cn(
+                'w-full rounded-xl border border-border bg-surface-2 px-3 py-2.5 text-sm',
+                !editando && 'text-muted',
+              )}
+            />
+          </div>
+
+          {/* Access Token */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">Access Token</label>
+            <div className="flex items-center gap-2">
+              <input
+                readOnly={!editando}
+                type={verToken ? 'text' : 'password'}
+                value={bm.token}
+                placeholder="EAAB..."
+                onChange={(e) => onChange({ token: e.target.value })}
+                className="w-full truncate rounded-xl border border-border bg-surface-2 px-3 py-2.5 font-mono text-xs text-muted"
+              />
+              <button
+                onClick={() => setVerToken((v) => !v)}
+                className="shrink-0 rounded-xl border border-border bg-surface-2 p-2.5 text-muted hover:text-foreground"
+                title={verToken ? 'Ocultar' : 'Mostrar'}
+              >
+                {verToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Ad Accounts */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">Ad Accounts</label>
+            <div className="space-y-2">
+              {bm.contas.map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-surface-2/60 px-3 py-2.5"
+                >
+                  <button
+                    onClick={() => setConta(c.id, { selecionada: !c.selecionada })}
+                    title={c.selecionada ? 'Não sincronizar' : 'Sincronizar'}
+                    className={cn(
+                      'grid h-5 w-5 shrink-0 place-items-center rounded-full transition-colors',
+                      c.selecionada ? 'bg-accent text-white' : 'border border-border text-transparent',
+                    )}
+                  >
+                    <Check className="h-3 w-3" />
+                  </button>
+                  <span className="flex-1 truncate font-mono text-sm text-foreground">{c.id}</span>
+                  <button
+                    onClick={() => setConta(c.id, { moeda: c.moeda === 'BRL' ? 'USD' : 'BRL' })}
+                    title="Alternar moeda"
+                  >
+                    <Badge tone="cyan">{c.moeda}</Badge>
+                  </button>
+                  <Badge tone="cyan">Ativa</Badge>
+                  {editando && (
+                    <button
+                      onClick={() => onChange({ contas: bm.contas.filter((x) => x.id !== c.id) })}
+                      className="text-muted hover:text-negative"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              {editando && (
+                <div className="flex items-center gap-2">
+                  <input
+                    placeholder="ID da conta (ex.: 542086958254702)"
+                    value={novaConta}
+                    onChange={(e) => setNovaConta(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addConta()}
+                    className="flex-1 rounded-xl border border-border bg-surface-2 px-3 py-2 font-mono text-xs"
+                  />
+                  <Button onClick={addConta} className="shrink-0">
+                    <Plus className="h-4 w-4" /> Conta
+                  </Button>
+                </div>
+              )}
+            </div>
+            <p className="mt-2 text-xs text-muted">
+              Desmarque as contas que não deseja sincronizar. Clique em <strong>BRL/USD</strong> para
+              definir a moeda — contas em USD ficam isentas do imposto Meta Ads.
+            </p>
+          </div>
+
+          {/* Ações */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setEditando((e) => !e)}
+              className={cn(
+                'flex-1 rounded-xl border py-2.5 text-sm font-medium transition-colors',
+                editando
+                  ? 'border-accent bg-accent-soft text-accent'
+                  : 'border-border bg-surface-2 text-foreground hover:bg-surface-2/70',
+              )}
+            >
+              {editando ? 'Concluir edição' : 'Editar'}
+            </button>
+            <button
+              onClick={onRemove}
+              title="Excluir BM"
+              className="rounded-xl bg-negative/90 p-2.5 text-white hover:bg-negative"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 export function Configuracoes() {
   const [tab, setTab] = useState<'vendas' | 'meta'>('vendas')
   const [metaTab, setMetaTab] = useState<'overview' | 'bms'>('overview')
   const [chave, setChave] = useStored('aj.webhookSecret', genKey())
   const [bms, setBms] = useStored<BM[]>('aj.metaBMs', [])
-  const [expandido, setExpandido] = useState<string | null>(null)
-  const [novoBM, setNovoBM] = useState({ nome: '', total: '' })
+  const [mostrarForm, setMostrarForm] = useState(false)
+  const [novoBM, setNovoBM] = useState({ nome: '', token: '', contas: '' })
 
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
   const webhookUrl = `${origin}/api/webhook/vendas/${chave}`
 
   const bmsAtivas = bms.filter((b) => b.ativa).length
-  const totalContas = bms.reduce((acc, b) => acc + b.total, 0)
+  const totalContas = bms.reduce((acc, b) => acc + b.contas.length, 0)
 
   const regenerar = () => {
-    if (confirm('Gerar uma nova chave? Você precisará atualizar a URL nas plataformas e no Vercel.')) {
+    if (confirm('Gerar uma nova chave? Você precisará atualizar a URL nas plataformas e o SALES_WEBHOOK_SECRET no Vercel.')) {
       setChave(genKey())
     }
   }
 
   const addBM = () => {
     if (!novoBM.nome.trim()) return
-    const total = Number(novoBM.total) || 0
+    const contas: AdAccount[] = novoBM.contas
+      .split(/[\n,]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((id) => ({ id, selecionada: true, moeda: 'BRL' as const }))
     setBms((prev) => [
       ...prev,
       {
         id: crypto.randomUUID(),
         nome: novoBM.nome.trim(),
         ativa: true,
-        contas: total,
-        total,
-        verificado: false,
+        token: novoBM.token.trim(),
+        tokenStatus: 'nao_verificado',
+        contas,
       },
     ])
-    setNovoBM({ nome: '', total: '' })
+    setNovoBM({ nome: '', token: '', contas: '' })
+    setMostrarForm(false)
   }
+
+  const patchBM = (id: string, patch: Partial<BM>) =>
+    setBms((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)))
 
   return (
     <div className="mx-auto max-w-4xl">
-      <PageHeader
-        title="Configurações"
-        subtitle="Configure integrações e preferências do sistema"
-      />
+      <PageHeader title="Configurações" subtitle="Configure integrações e preferências do sistema" />
 
       {/* Abas principais */}
       <div className="mb-5 grid grid-cols-2 gap-2 rounded-2xl border border-white/[0.06] bg-surface/40 p-1.5">
@@ -208,7 +430,6 @@ export function Configuracoes() {
 
       {tab === 'vendas' && (
         <div className="space-y-4">
-          {/* Chave de Segurança */}
           <Card className="p-5">
             <div className="flex items-center gap-2">
               <Info className="h-5 w-5 text-accent" />
@@ -219,8 +440,8 @@ export function Configuracoes() {
             </p>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted">
-                Se você suspeitar que sua chave foi comprometida, regenere-a. Lembre-se de
-                atualizar as URLs em todas as plataformas e o <code className="text-accent">SALES_WEBHOOK_SECRET</code> no Vercel.
+                Se você suspeitar que sua chave foi comprometida, regenere-a. Lembre-se de atualizar as
+                URLs em todas as plataformas e o <code className="text-accent">SALES_WEBHOOK_SECRET</code> no Vercel.
               </p>
               <Button onClick={regenerar} className="shrink-0">
                 <RefreshCw className="h-4 w-4" /> Regenerar Chave
@@ -228,7 +449,6 @@ export function Configuracoes() {
             </div>
           </Card>
 
-          {/* Integração Payt */}
           <Card className="p-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -256,7 +476,6 @@ export function Configuracoes() {
             />
           </Card>
 
-          {/* Integração Luminar Pay */}
           <Card className="p-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -290,8 +509,8 @@ export function Configuracoes() {
           </Callout>
 
           <Callout tone="success" icon={<CircleCheck className="h-5 w-5" />}>
-            <strong className="text-foreground">Pronto!</strong> Após configurar, suas vendas de
-            ambas as plataformas serão sincronizadas automaticamente com o dashboard em tempo real.
+            <strong className="text-foreground">Pronto!</strong> Após configurar, suas vendas de ambas
+            as plataformas serão sincronizadas automaticamente com o dashboard em tempo real.
           </Callout>
         </div>
       )}
@@ -306,7 +525,6 @@ export function Configuracoes() {
             Conecte suas Business Managers do Meta para sincronizar automaticamente seus gastos com anúncios.
           </p>
 
-          {/* Sub-abas */}
           <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl border border-white/[0.06] bg-surface-2/40 p-1.5">
             {(['overview', 'bms'] as const).map((id) => (
               <button
@@ -324,7 +542,6 @@ export function Configuracoes() {
 
           {metaTab === 'overview' && (
             <div className="mt-5 space-y-5">
-              {/* Conexão rápida */}
               <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
                 <h4 className="font-semibold">Conexão Rápida</h4>
                 <p className="mt-1 text-sm text-muted">
@@ -340,7 +557,6 @@ export function Configuracoes() {
                 <span className="h-px flex-1 bg-border" /> ou configure manualmente <span className="h-px flex-1 bg-border" />
               </div>
 
-              {/* Stats */}
               <div className="grid grid-cols-3 gap-3">
                 {[
                   { v: bms.length, l: 'BMs Configuradas', c: 'text-foreground' },
@@ -368,8 +584,8 @@ export function Configuracoes() {
               </button>
 
               <Callout tone="success" icon={<CircleCheck className="h-5 w-5" />}>
-                <strong className="text-foreground">Conectado!</strong> Use o botão de sincronização
-                para buscar os dados mais recentes. Os gastos serão exibidos automaticamente no dashboard.
+                <strong className="text-foreground">Conectado!</strong> Use o botão de sincronização para
+                buscar os dados mais recentes. Os gastos serão exibidos automaticamente no dashboard.
               </Callout>
 
               <StepList
@@ -397,69 +613,51 @@ export function Configuracoes() {
                   <h4 className="font-semibold">Business Managers</h4>
                   <p className="text-sm text-muted">Gerencie suas BMs e seus respectivos Ad Accounts.</p>
                 </div>
-              </div>
-
-              {/* Adicionar BM */}
-              <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3 sm:flex-row">
-                <input
-                  placeholder="Nome da BM (ex.: BM 01 - PRINCIPAL)"
-                  value={novoBM.nome}
-                  onChange={(e) => setNovoBM({ ...novoBM, nome: e.target.value })}
-                  className="flex-1 rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm"
-                />
-                <input
-                  type="number"
-                  placeholder="Nº de contas"
-                  value={novoBM.total}
-                  onChange={(e) => setNovoBM({ ...novoBM, total: e.target.value })}
-                  className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm sm:w-32"
-                />
-                <Button variant="primary" onClick={addBM} className="shrink-0">
+                <Button variant="primary" onClick={() => setMostrarForm((m) => !m)} className="shrink-0">
                   <Plus className="h-4 w-4" /> Adicionar BM
                 </Button>
               </div>
 
-              {/* Lista */}
+              {mostrarForm && (
+                <div className="mt-4 space-y-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                  <input
+                    placeholder="Nome da BM (ex.: BM 01 - CONTA PRINCIPAL)"
+                    value={novoBM.nome}
+                    onChange={(e) => setNovoBM({ ...novoBM, nome: e.target.value })}
+                    className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm"
+                  />
+                  <input
+                    placeholder="Access Token (EAAB...)"
+                    value={novoBM.token}
+                    onChange={(e) => setNovoBM({ ...novoBM, token: e.target.value })}
+                    className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 font-mono text-xs"
+                  />
+                  <textarea
+                    placeholder="IDs das Ad Accounts — um por linha (ex.: 542086958254702)"
+                    value={novoBM.contas}
+                    onChange={(e) => setNovoBM({ ...novoBM, contas: e.target.value })}
+                    rows={3}
+                    className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 font-mono text-xs"
+                  />
+                  <Button variant="primary" onClick={addBM}>
+                    <Plus className="h-4 w-4" /> Salvar BM
+                  </Button>
+                </div>
+              )}
+
               <div className="mt-3 space-y-2">
-                {bms.length === 0 && (
+                {bms.length === 0 && !mostrarForm && (
                   <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-muted">
-                    Nenhuma BM cadastrada. Adicione a primeira acima.
+                    Nenhuma BM cadastrada. Clique em "Adicionar BM" para começar.
                   </p>
                 )}
                 {bms.map((bm) => (
-                  <div key={bm.id} className="rounded-2xl border border-white/[0.06] bg-white/[0.02]">
-                    <div className="flex items-center gap-2 p-3">
-                      <span className="flex-1 truncate font-medium text-foreground">{bm.nome}</span>
-                      {bm.ativa && <Badge>Ativa</Badge>}
-                      <Badge tone="muted">{bm.contas}/{bm.total} contas</Badge>
-                      <span className="hidden items-center gap-1 text-[11px] text-muted sm:flex">
-                        <Info className="h-3 w-3" /> Não verificado
-                      </span>
-                      <Toggle
-                        checked={bm.ativa}
-                        onChange={(v) =>
-                          setBms((prev) => prev.map((b) => (b.id === bm.id ? { ...b, ativa: v } : b)))
-                        }
-                      />
-                      <button
-                        onClick={() => setExpandido(expandido === bm.id ? null : bm.id)}
-                        className="rounded-lg p-1.5 text-muted hover:text-foreground"
-                      >
-                        <ChevronDown className={cn('h-4 w-4 transition-transform', expandido === bm.id && 'rotate-180')} />
-                      </button>
-                    </div>
-                    {expandido === bm.id && (
-                      <div className="flex items-center justify-between border-t border-white/[0.06] px-3 py-2.5 text-sm text-muted">
-                        <span>{bm.total} Ad Account{bm.total === 1 ? '' : 's'} nesta BM</span>
-                        <button
-                          onClick={() => setBms((prev) => prev.filter((b) => b.id !== bm.id))}
-                          className="flex items-center gap-1 rounded-lg px-2 py-1 text-negative hover:bg-negative/10"
-                        >
-                          <Trash2 className="h-4 w-4" /> Remover
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  <BMCard
+                    key={bm.id}
+                    bm={bm}
+                    onChange={(patch) => patchBM(bm.id, patch)}
+                    onRemove={() => setBms((prev) => prev.filter((b) => b.id !== bm.id))}
+                  />
                 ))}
               </div>
             </div>
