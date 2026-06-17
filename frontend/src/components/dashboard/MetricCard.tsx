@@ -69,14 +69,14 @@ export function MetricCard({
   className?: string
 }) {
   return (
-    <Card className={cn('group relative overflow-hidden p-5 hover:border-white/[0.12]', className)}>
+    <Card className={cn('group relative overflow-hidden p-4 hover:border-white/[0.12]', className)}>
       {/* brilho sutil no hover */}
       <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-accent/10 opacity-0 blur-2xl transition-opacity group-hover:opacity-100" />
 
       <div className="flex items-start justify-between">
         <span className="text-sm font-medium text-muted">{label}</span>
-        <div className={cn('grid h-9 w-9 place-items-center rounded-xl', toneIcon[tone])}>
-          <Icon className="h-[18px] w-[18px]" />
+        <div className={cn('grid h-8 w-8 place-items-center rounded-xl', toneIcon[tone])}>
+          <Icon className="h-4 w-4" />
         </div>
       </div>
 

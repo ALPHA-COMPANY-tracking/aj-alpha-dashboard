@@ -106,7 +106,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <MetricCard
           className="order-2"
           label="Faturamento Total"
@@ -135,13 +135,13 @@ export function Dashboard() {
           delta={{ value: pctDelta(metrics.totalVendas, prev.totalVendas) }}
         />
         {/* Investido Total (junção de Investimento + Imposto) */}
-        <Card className="order-1 p-5">
+        <Card className="order-1 p-4">
           <div className="flex items-start justify-between">
             <span className="text-[11px] font-semibold uppercase tracking-widest text-muted">
               Investido (Total)
             </span>
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-accent-gradient text-white shadow-[0_8px_20px_-8px_rgba(230,178,58,0.8)]">
-              <DollarSign className="h-[18px] w-[18px]" />
+            <div className="grid h-8 w-8 place-items-center rounded-xl bg-accent-gradient text-white shadow-[0_8px_20px_-8px_rgba(230,178,58,0.8)]">
+              <DollarSign className="h-4 w-4" />
             </div>
           </div>
 
@@ -162,7 +162,7 @@ export function Dashboard() {
             </div>
           </div>
 
-          <div className="mt-3 flex items-center justify-between border-t border-white/[0.06] pt-3">
+          <div className="mt-2 flex items-center justify-between border-t border-white/[0.06] pt-2">
             <span className="text-[11px] text-muted">
               Imposto {settings.impostoAtivo ? 'Ativo' : 'Inativo'} ·{' '}
               {settings.aliquotaImposto.toFixed(2).replace('.', ',')}%
