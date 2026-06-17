@@ -22,6 +22,13 @@ const toneIcon: Record<Tone, string> = {
   accent: 'bg-accent-gradient text-white shadow-[0_8px_20px_-8px_rgba(230,178,58,0.8)]',
 }
 
+const toneVisual: Record<Tone, string> = {
+  default: 'from-accent/5 via-accent/25 to-accent/5',
+  positive: 'from-positive/5 via-positive/25 to-positive/5',
+  negative: 'from-negative/5 via-negative/25 to-negative/5',
+  accent: 'from-accent/5 via-accent/30 to-accent/5',
+}
+
 export interface DeltaInfo {
   /** variação percentual (ex.: 12.5 = +12,5%) */
   value: number
@@ -69,7 +76,7 @@ export function MetricCard({
   className?: string
 }) {
   return (
-    <Card className={cn('group relative h-[124px] overflow-hidden p-4 hover:border-white/[0.12]', className)}>
+    <Card className={cn('group relative overflow-hidden p-4 hover:border-white/[0.12]', className)}>
       {/* brilho sutil no hover */}
       <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-accent/10 opacity-0 blur-2xl transition-opacity group-hover:opacity-100" />
 
@@ -94,6 +101,29 @@ export function MetricCard({
       <div className="mt-1 flex items-center justify-between">
         {hint && !loading && <span className="text-xs text-muted">{hint}</span>}
         {action}
+      </div>
+
+      <div className="pointer-events-none absolute inset-x-4 bottom-4 h-10 overflow-hidden rounded-xl border border-white/[0.04] bg-white/[0.015]">
+        <div className={cn('metric-card-sweep absolute inset-0 bg-gradient-to-r opacity-80', toneVisual[tone])} />
+        <div className="absolute inset-x-3 bottom-2 flex items-end gap-1.5">
+          {[34, 52, 42, 68, 55, 76, 60, 82, 64].map((height, index) => (
+            <span
+              key={index}
+              className={cn(
+                'metric-card-bar flex-1 rounded-full',
+                tone === 'positive'
+                  ? 'bg-positive/35'
+                  : tone === 'negative'
+                    ? 'bg-negative/35'
+                    : 'bg-accent/35',
+              )}
+              style={{
+                height: `${height}%`,
+                animationDelay: `${index * 120}ms`,
+              }}
+            />
+          ))}
+        </div>
       </div>
     </Card>
   )

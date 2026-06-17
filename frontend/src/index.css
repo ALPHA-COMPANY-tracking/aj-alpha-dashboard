@@ -57,3 +57,34 @@
     background-position: 0 50%;
   }
 }
+
+.metric-card-sweep {
+  animation: metric-sweep 4.2s ease-in-out infinite;
+}
+
+.metric-card-bar {
+  animation: metric-bar 2.4s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+@keyframes metric-sweep {
+  0%,
+  100% {
+    transform: translateX(-35%);
+  }
+  50% {
+    transform: translateX(35%);
+  }
+}
+
+@keyframes metric-bar {
+  0%,
+  100% {
+    transform: scaleY(0.62);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 0.75;
+  }
+}
