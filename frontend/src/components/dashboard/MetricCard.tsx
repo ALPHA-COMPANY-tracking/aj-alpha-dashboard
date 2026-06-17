@@ -69,12 +69,12 @@ export function MetricCard({
   className?: string
 }) {
   return (
-    <Card className={cn('group relative overflow-hidden p-4 hover:border-white/[0.12]', className)}>
+    <Card className={cn('group relative h-[124px] overflow-hidden p-4 hover:border-white/[0.12]', className)}>
       {/* brilho sutil no hover */}
       <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-accent/10 opacity-0 blur-2xl transition-opacity group-hover:opacity-100" />
 
       <div className="flex items-start justify-between">
-        <span className="text-sm font-medium text-muted">{label}</span>
+        <span className="text-sm font-semibold text-muted">{label}</span>
         <div className={cn('grid h-8 w-8 place-items-center rounded-xl', toneIcon[tone])}>
           <Icon className="h-4 w-4" />
         </div>
@@ -84,7 +84,7 @@ export function MetricCard({
         <Skeleton className="mt-4 h-8 w-28" />
       ) : (
         <div className="mt-3 flex items-center gap-2">
-          <span className={cn('text-2xl font-bold tracking-tight', toneText[tone])}>
+          <span className={cn('text-[24px] font-bold leading-tight tracking-tight', toneText[tone])}>
             {value}
           </span>
           {delta && <DeltaBadge delta={delta} />}

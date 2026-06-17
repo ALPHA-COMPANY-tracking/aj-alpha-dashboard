@@ -107,35 +107,8 @@ export function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        <MetricCard
-          className="order-2"
-          label="Faturamento Total"
-          value={formatBRL(metrics.faturamento)}
-          icon={DollarSign}
-          tone="accent"
-          loading={loading}
-          delta={{ value: pctDelta(metrics.faturamento, prev.faturamento) }}
-        />
-        <MetricCard
-          className="order-3"
-          label="Lucro Liquido"
-          value={formatBRL(metrics.lucroLiquido)}
-          hint="Lucro real"
-          icon={TrendingUp}
-          tone={metrics.lucroLiquido >= 0 ? 'positive' : 'negative'}
-          loading={loading}
-          delta={{ value: pctDelta(metrics.lucroLiquido, prev.lucroLiquido) }}
-        />
-        <MetricCard
-          className="order-4"
-          label="Total de Vendas"
-          value={formatNumber(metrics.totalVendas)}
-          icon={ShoppingCart}
-          loading={loading}
-          delta={{ value: pctDelta(metrics.totalVendas, prev.totalVendas) }}
-        />
         {/* Investido Total (junção de Investimento + Imposto) */}
-        <Card className="order-1 p-4">
+        <Card className="p-4">
           <div className="flex items-start justify-between">
             <span className="text-[11px] font-semibold uppercase tracking-widest text-muted">
               Investido (Total)
@@ -174,6 +147,30 @@ export function Dashboard() {
             />
           </div>
         </Card>
+        <MetricCard
+          label="Faturamento Total"
+          value={formatBRL(metrics.faturamento)}
+          icon={DollarSign}
+          tone="accent"
+          loading={loading}
+          delta={{ value: pctDelta(metrics.faturamento, prev.faturamento) }}
+        />
+        <MetricCard
+          label="Lucro Liquido"
+          value={formatBRL(metrics.lucroLiquido)}
+          hint="Lucro real"
+          icon={TrendingUp}
+          tone={metrics.lucroLiquido >= 0 ? 'positive' : 'negative'}
+          loading={loading}
+          delta={{ value: pctDelta(metrics.lucroLiquido, prev.lucroLiquido) }}
+        />
+        <MetricCard
+          label="Total de Vendas"
+          value={formatNumber(metrics.totalVendas)}
+          icon={ShoppingCart}
+          loading={loading}
+          delta={{ value: pctDelta(metrics.totalVendas, prev.totalVendas) }}
+        />
       </div>
 
       {/* Vendas por plataforma */}
