@@ -16,7 +16,6 @@ interface DashboardData {
   loading: boolean
 }
 
-/** Calcula tudo a partir do mock local (fallback / modo demo). */
 function mockData(range: DateRange, settings: Settings) {
   return {
     metrics: computeMetrics(range, settings),
@@ -25,16 +24,58 @@ function mockData(range: DateRange, settings: Settings) {
   }
 }
 
-/**
- * Fonte de dados do dashboard. Usa a API real quando VITE_API_URL está
- * configurada; caso contrário (ou em caso de erro) cai para o mock.
- */
+function emptyData() {
+  const zero: DashboardMetrics = {
+    faturamento: 0,
+    gastoAnuncios: 0,
+    imposto: 0,
+    gastosOperacionais: 0,
+    lucroLiquido: 0,
+    totalVendas: 0,
+    ticketMedio: 0,
+    roas: 0,
+    leads: 0,
+    leadsPorVenda: 0,
+    taxaConversao: 0,
+    cpaMedio: 0,
+    investimentoTotal: 0,
+    faturamentoPayt: 0,
+    faturamentoPaytProdutor: 0,
+    faturamentoPaytAfiliado: 0,
+    faturamentoLuminar: 0,
+  }
+
+  return {
+    metrics: zero,
+    previous: zero,
+    charts: {
+      vendasPorDiaSemana: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'].map(
+        (dia) => ({ dia, vendas: 0 }),
+      ),
+      vendasPorHorario: [
+        '06-08',
+        '08-10',
+        '10-12',
+        '12-14',
+        '14-16',
+        '16-18',
+        '18-20',
+        '20-22',
+        '22-00',
+      ].map((faixa) => ({ faixa, vendas: 0 })),
+      temDadosHorario: false,
+    },
+  }
+}
+
 export function useDashboardData(
   range: DateRange,
   settings: Settings,
   reloadKey: number,
 ): DashboardData {
-  const [data, setData] = useState(() => mockData(range, settings))
+  const [data, setData] = useState(() =>
+    import.meta.env.PROD ? emptyData() : mockData(range, settings),
+  )
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -54,14 +95,12 @@ export function useDashboardData(
           setLoading(false)
         })
         .catch((err) => {
-          // Fallback para o mock se a API falhar (não quebra a tela).
-          console.warn('[dashboard] API indisponível, usando mock:', err.message)
+          console.warn('[dashboard] API indisponivel:', err.message)
           if (cancelled) return
-          setData(mockData(range, settings))
+          setData(import.meta.env.PROD ? emptyData() : mockData(range, settings))
           setLoading(false)
         })
     } else {
-      // Modo demo: pequeno delay para exibir o skeleton.
       const t = setTimeout(() => {
         if (cancelled) return
         setData(mockData(range, settings))

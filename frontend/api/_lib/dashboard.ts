@@ -64,6 +64,13 @@ function dateOnly(date: Date) {
   return date.toISOString().slice(0, 10)
 }
 
+function configuredAffiliateEmails() {
+  return (process.env.PAYT_AFFILIATE_EMAILS ?? '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean)
+}
+
 async function computeMetrics(
   from: Date,
   to: Date,
@@ -73,7 +80,7 @@ async function computeMetrics(
   const [salesRes, leadsRes, dailyRes, expensesRes] = await Promise.all([
     supabase
       .from('sales')
-      .select('valor, gateway, papel')
+      .select('valor, gateway, papel, affiliate_email')
       .eq('tipo', 'venda')
       .gte('data_hora', iso(from))
       .lte('data_hora', iso(to)),
@@ -107,12 +114,18 @@ async function computeMetrics(
   // Faturamento por plataforma e papel.
   const paytVendas = vendas.filter((s) => (s.gateway ?? 'payt') === 'payt')
   const luminarVendas = vendas.filter((s) => s.gateway === 'luminar-pay')
+  const affiliateEmails = configuredAffiliateEmails()
+  const isAffiliateSale = (sale: (typeof paytVendas)[number]) => {
+    const affiliateEmail = String(sale.affiliate_email ?? '').toLowerCase()
+    if (affiliateEmails.length > 0) return affiliateEmails.includes(affiliateEmail)
+    return sale.papel === 'afiliado'
+  }
   const faturamentoPayt = round2(
     paytVendas.reduce((acc, s) => acc + Number(s.valor ?? 0), 0),
   )
   const faturamentoPaytAfiliado = round2(
     paytVendas
-      .filter((s) => s.papel === 'afiliado')
+      .filter(isAffiliateSale)
       .reduce((acc, s) => acc + Number(s.valor ?? 0), 0),
   )
   const faturamentoPaytProdutor = round2(faturamentoPayt - faturamentoPaytAfiliado)

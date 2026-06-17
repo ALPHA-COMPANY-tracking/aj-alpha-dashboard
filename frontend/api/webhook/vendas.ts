@@ -24,10 +24,38 @@ const PostbackSchema = z
   })
   .passthrough()
 
-// [AJUSTAR] Detecta produtor x afiliado no postback da Payt. Quando você enviar
-// um postback REAL de venda como afiliado, confirmo o campo exato. Por segurança,
-// o padrão é "produtor".
-function detectarPapel(ev: Record<string, unknown>): 'produtor' | 'afiliado' {
+function readNested(obj: unknown, path: string[]): unknown {
+  let current = obj
+  for (const key of path) {
+    if (!current || typeof current !== 'object') return undefined
+    current = (current as Record<string, unknown>)[key]
+  }
+  return current
+}
+
+function firstString(ev: Record<string, unknown>, paths: string[][]): string | null {
+  for (const path of paths) {
+    const value = readNested(ev, path)
+    if (typeof value === 'string' && value.trim()) return value.trim()
+  }
+  return null
+}
+
+function normalEmail(email: string | null) {
+  return email?.trim().toLowerCase() || null
+}
+
+function detectarPapel(
+  ev: Record<string, unknown>,
+  affiliateEmail: string | null,
+): 'produtor' | 'afiliado' {
+  const affiliateEmails = (process.env.PAYT_AFFILIATE_EMAILS ?? '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean)
+
+  if (affiliateEmail && affiliateEmails.includes(affiliateEmail)) return 'afiliado'
+
   const txt = (v: unknown) => (typeof v === 'string' ? v.toLowerCase() : '')
   const ehAfiliado =
     Boolean(ev.affiliate) ||
@@ -38,6 +66,7 @@ function detectarPapel(ev: Record<string, unknown>): 'produtor' | 'afiliado' {
     txt(ev.type_seller).includes('afili') ||
     txt(ev.role).includes('afili') ||
     txt(ev.type).includes('afili')
+
   return ehAfiliado ? 'afiliado' : 'produtor'
 }
 
@@ -77,6 +106,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const event = parsed.data
+  const eventRecord = event as Record<string, unknown>
   const status = event.status ?? ''
   const externalId = event.transaction_id ?? event.id
   const cents = event.transaction?.total_price ?? event.total_price ?? 0
@@ -87,7 +117,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     new Date().toISOString()
   const dataHora = new Date(paidAt)
   const gateway = event.integration_key === 'luminar-pay' ? 'luminar-pay' : 'payt'
-  const papel = gateway === 'payt' ? detectarPapel(event as Record<string, unknown>) : 'produtor'
+  const customerEmail = normalEmail(
+    firstString(eventRecord, [
+      ['customer', 'email'],
+      ['client', 'email'],
+      ['buyer', 'email'],
+      ['email'],
+    ]),
+  )
+  const affiliateEmail = normalEmail(
+    firstString(eventRecord, [
+      ['affiliate', 'email'],
+      ['affiliator', 'email'],
+      ['producer_affiliate', 'email'],
+      ['affiliate_email'],
+      ['affiliator_email'],
+    ]),
+  )
+  const papel =
+    gateway === 'payt' ? detectarPapel(eventRecord, affiliateEmail) : 'produtor'
 
   if (event.test || status !== 'paid' || !externalId) {
     return res.status(200).json({ ok: true, ignored: true })
@@ -100,6 +148,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     origem: event.link?.url ?? null,
     gateway,
     papel,
+    customer_email: customerEmail,
+    affiliate_email: affiliateEmail,
+    raw_payload: event,
     tipo: 'venda',
     dia_semana: dataHora.getDay(),
     hora: dataHora.getHours(),
@@ -108,11 +159,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     let { error } = await supabase.from('sales').upsert(registro, opts)
-    // Se a coluna `papel` ainda não existir no banco, grava sem ela (não perde a venda).
-    if (error && /papel/i.test(error.message ?? '')) {
-      const semPapel: Record<string, unknown> = { ...registro }
-      delete semPapel.papel
-      ;({ error } = await supabase.from('sales').upsert(semPapel, opts))
+    if (error && /(papel|customer_email|affiliate_email|raw_payload)/i.test(error.message ?? '')) {
+      const compat: Record<string, unknown> = { ...registro }
+      delete compat.papel
+      delete compat.customer_email
+      delete compat.affiliate_email
+      delete compat.raw_payload
+      ;({ error } = await supabase.from('sales').upsert(compat, opts))
     }
     if (error) throw error
     return res.status(200).json({ ok: true })

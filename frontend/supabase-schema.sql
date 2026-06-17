@@ -22,6 +22,9 @@ create table if not exists public.sales (
   origem text,
   gateway text default 'payt',
   papel text default 'produtor',
+  customer_email text,
+  affiliate_email text,
+  raw_payload jsonb,
   tipo text not null default 'venda',
   dia_semana integer not null,
   hora integer not null,
@@ -30,6 +33,9 @@ create table if not exists public.sales (
 
 -- Para bancos já criados antes desta coluna existir:
 alter table public.sales add column if not exists papel text default 'produtor';
+alter table public.sales add column if not exists customer_email text;
+alter table public.sales add column if not exists affiliate_email text;
+alter table public.sales add column if not exists raw_payload jsonb;
 
 create index if not exists sales_data_hora_idx on public.sales (data_hora);
 
