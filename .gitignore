@@ -11,6 +11,8 @@ backend/dist
 *.env
 !*.env.example
 .deploy-secrets.tmp
+.vercel-cli-auth
+frontend/.vercel-cli-auth
 
 # Logs
 *.log
