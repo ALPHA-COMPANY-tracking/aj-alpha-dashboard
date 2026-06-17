@@ -37,6 +37,7 @@ function firstString(ev: Record<string, unknown>, paths: string[][]): string | n
   for (const path of paths) {
     const value = readNested(ev, path)
     if (typeof value === 'string' && value.trim()) return value.trim()
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value)
   }
   return null
 }
@@ -45,9 +46,84 @@ function normalEmail(email: string | null) {
   return email?.trim().toLowerCase() || null
 }
 
+function parseAmount(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value > 10000 ? value / 100 : value
+  }
+
+  if (typeof value !== 'string') return null
+
+  const normalized = value
+    .replace(/R\$/gi, '')
+    .replace(/\s/g, '')
+    .replace(/\./g, '')
+    .replace(',', '.')
+    .trim()
+
+  if (!normalized || normalized === '-') return null
+
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function firstAmount(ev: Record<string, unknown>, paths: string[][]): number {
+  for (const path of paths) {
+    const amount = parseAmount(readNested(ev, path))
+    if (amount !== null) return amount
+  }
+  return 0
+}
+
+function parseEventDate(value: string | null): Date {
+  if (!value) return new Date()
+
+  const br = value.match(
+    /^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?$/,
+  )
+  if (br) {
+    const [, day, month, year, hour = '00', minute = '00', second = '00'] = br
+    return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}-03:00`)
+  }
+
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? new Date() : date
+}
+
+function isApprovedPayment(ev: Record<string, unknown>) {
+  const status = [
+    ev.status,
+    ev.payment_status,
+    ev.status_payment,
+    ev.status_pagamento,
+    ev.purchase_status,
+    ev.status_compra,
+    ev.event,
+    ev.event_name,
+    ev.type,
+  ]
+    .filter((value): value is string => typeof value === 'string')
+    .join(' ')
+    .toLowerCase()
+
+  if (status.includes('cancel') || status.includes('reembols') || status.includes('chargeback')) {
+    return false
+  }
+
+  if (!status) return true
+
+  return (
+    status.includes('paid') ||
+    status.includes('approved') ||
+    status.includes('aprovad') ||
+    status.includes('finaliz') ||
+    status.includes('faturad')
+  )
+}
+
 function detectarPapel(
   ev: Record<string, unknown>,
   affiliateEmail: string | null,
+  affiliateName: string | null,
 ): 'produtor' | 'afiliado' {
   const affiliateEmails = (process.env.PAYT_AFFILIATE_EMAILS ?? '')
     .split(',')
@@ -55,6 +131,7 @@ function detectarPapel(
     .filter(Boolean)
 
   if (affiliateEmail && affiliateEmails.includes(affiliateEmail)) return 'afiliado'
+  if (affiliateName) return 'afiliado'
 
   const txt = (v: unknown) => (typeof v === 'string' ? v.toLowerCase() : '')
   const ehAfiliado =
@@ -62,6 +139,7 @@ function detectarPapel(
     Boolean(ev.affiliate_id) ||
     Boolean(ev.affiliateId) ||
     Boolean(ev.id_affiliate) ||
+    Boolean(ev.afiliado) ||
     txt(ev.commission_type).includes('afili') ||
     txt(ev.type_seller).includes('afili') ||
     txt(ev.role).includes('afili') ||
@@ -107,15 +185,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const event = parsed.data
   const eventRecord = event as Record<string, unknown>
-  const status = event.status ?? ''
-  const externalId = event.transaction_id ?? event.id
-  const cents = event.transaction?.total_price ?? event.total_price ?? 0
-  const paidAt =
-    event.transaction?.paid_at ??
-    event.paid_at ??
-    event.updated_at ??
-    new Date().toISOString()
-  const dataHora = new Date(paidAt)
+  const externalId = firstString(eventRecord, [
+    ['transaction_id'],
+    ['transaction', 'id'],
+    ['transaction', 'code'],
+    ['sale_id'],
+    ['sale', 'id'],
+    ['sale', 'code'],
+    ['codigo'],
+    ['code'],
+    ['id'],
+  ])
+  const valor = firstAmount(eventRecord, [
+    ['voce_recebe'],
+    ['você_recebe'],
+    ['Voce Recebe'],
+    ['Você Recebe'],
+    ['net_amount'],
+    ['net_value'],
+    ['producer_amount'],
+    ['balance'],
+    ['saldo_venda'],
+    ['valor_venda'],
+    ['amount'],
+    ['value'],
+    ['transaction', 'net_amount'],
+    ['transaction', 'amount'],
+    ['transaction', 'total_price'],
+    ['total_price'],
+  ])
+  const paidAt = firstString(eventRecord, [
+    ['transaction', 'paid_at'],
+    ['paid_at'],
+    ['approved_at'],
+    ['data_aprovacao'],
+    ['data_aprovacao_pagamento'],
+    ['data_aprovação'],
+    ['data_venda'],
+    ['updated_at'],
+    ['created_at'],
+  ])
+  const dataHora = parseEventDate(paidAt)
   const gateway = event.integration_key === 'luminar-pay' ? 'luminar-pay' : 'payt'
   const customerEmail = normalEmail(
     firstString(eventRecord, [
@@ -134,16 +244,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ['affiliator_email'],
     ]),
   )
+  const affiliateName = firstString(eventRecord, [
+    ['affiliate', 'name'],
+    ['affiliator', 'name'],
+    ['producer_affiliate', 'name'],
+    ['affiliate_name'],
+    ['affiliator_name'],
+    ['afiliado'],
+    ['Afiliado'],
+  ])
   const papel =
-    gateway === 'payt' ? detectarPapel(eventRecord, affiliateEmail) : 'produtor'
+    gateway === 'payt'
+      ? detectarPapel(eventRecord, affiliateEmail, affiliateName)
+      : 'produtor'
 
-  if (event.test || status !== 'paid' || !externalId) {
+  if (event.test || !isApprovedPayment(eventRecord) || !externalId || valor <= 0) {
     return res.status(200).json({ ok: true, ignored: true })
   }
 
   const registro = {
     external_id: externalId,
-    valor: cents / 100,
+    valor,
     data_hora: dataHora.toISOString(),
     origem: event.link?.url ?? null,
     gateway,
