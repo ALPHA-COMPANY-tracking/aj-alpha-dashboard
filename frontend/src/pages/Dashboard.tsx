@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
 import {
   DollarSign,
-  Landmark,
-  Layers,
   Megaphone,
   ShoppingCart,
   TrendingUp,
 } from 'lucide-react'
 import { MetricCard } from '../components/dashboard/MetricCard'
+import { Card } from '../components/ui/Card'
+import { Skeleton } from '../components/ui/Skeleton'
 import { SalesByHourChart, SalesByWeekdayChart } from '../components/dashboard/Charts'
 import {
   DateRangePicker,
@@ -115,33 +115,46 @@ export function Dashboard() {
           loading={loading}
           delta={{ value: pctDelta(metrics.totalVendas, prev.totalVendas) }}
         />
-        <MetricCard
-          label="Imposto Meta Ads"
-          value={formatBRL(metrics.imposto)}
-          hint={`Aliquota ${settings.aliquotaImposto.toFixed(2).replace('.', ',')}%`}
-          icon={Landmark}
-          loading={loading}
-          action={
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-muted">
-                {settings.impostoAtivo ? 'Ativo' : 'Inativo'}
-              </span>
-              <Toggle
-                checked={settings.impostoAtivo}
-                onChange={(v) => update({ impostoAtivo: v })}
-                label="Imposto ativo"
-              />
+        {/* Investido Total (junção de Investimento + Imposto) */}
+        <Card className="p-5">
+          <div className="flex items-start justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-muted">
+              Investido (Total)
+            </span>
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-accent-gradient text-white shadow-[0_8px_20px_-8px_rgba(139,92,246,0.8)]">
+              <DollarSign className="h-[18px] w-[18px]" />
             </div>
-          }
-        />
-        <MetricCard
-          label="Investimento Total"
-          value={formatBRL(metrics.investimentoTotal)}
-          hint="Anuncios + Imposto"
-          icon={Layers}
-          loading={loading}
-          delta={{ value: pctDelta(metrics.investimentoTotal, prev.investimentoTotal), goodWhenUp: false }}
-        />
+          </div>
+
+          {loading ? (
+            <Skeleton className="mt-4 h-8 w-32" />
+          ) : (
+            <div className="mt-3 text-2xl font-bold tracking-tight text-foreground">
+              {formatBRL(metrics.investimentoTotal)}
+            </div>
+          )}
+
+          <div className="mt-2 space-y-0.5 text-xs text-muted">
+            <div>
+              investido: <span className="text-foreground">{formatBRL(metrics.gastoAnuncios)}</span>
+            </div>
+            <div>
+              imposto: <span className="text-foreground">{formatBRL(metrics.imposto)}</span>
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between border-t border-white/[0.06] pt-3">
+            <span className="text-[11px] text-muted">
+              Imposto {settings.impostoAtivo ? 'Ativo' : 'Inativo'} ·{' '}
+              {settings.aliquotaImposto.toFixed(2).replace('.', ',')}%
+            </span>
+            <Toggle
+              checked={settings.impostoAtivo}
+              onChange={(v) => update({ impostoAtivo: v })}
+              label="Imposto ativo"
+            />
+          </div>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
