@@ -48,19 +48,22 @@ function normalEmail(email: string | null) {
 
 function parseAmount(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) {
-    return value > 10000 ? value / 100 : value
+    return Number.isInteger(value) && Math.abs(value) >= 1000 ? value / 100 : value
   }
 
   if (typeof value !== 'string') return null
 
-  const normalized = value
-    .replace(/R\$/gi, '')
-    .replace(/\s/g, '')
+  const compact = value.replace(/R\$/gi, '').replace(/\s/g, '').trim()
+  if (!compact || compact === '-') return null
+
+  if (/^-?\d{4,}$/.test(compact)) {
+    const cents = Number(compact)
+    return Number.isFinite(cents) ? cents / 100 : null
+  }
+
+  const normalized = compact
     .replace(/\./g, '')
     .replace(',', '.')
-    .trim()
-
-  if (!normalized || normalized === '-') return null
 
   const parsed = Number(normalized)
   return Number.isFinite(parsed) ? parsed : null
@@ -74,22 +77,18 @@ function firstAmount(ev: Record<string, unknown>, paths: string[][]): number {
   return 0
 }
 
-function commissionByType(ev: Record<string, unknown>, type: string) {
-  const commissions = ev.commission
-  if (!Array.isArray(commissions)) return null
-
-  const found = commissions.find((item) => {
-    if (!item || typeof item !== 'object') return false
-    const itemType = (item as Record<string, unknown>).type
-    return typeof itemType === 'string' && itemType.toLowerCase() === type
+// Comissão que pertence ao DONO da conta — define o papel REAL do usuário na
+// venda (producer => produtor, affiliation => afiliado) e o valor que ele recebe.
+function comissaoDoDono(ev: Record<string, unknown>): Record<string, unknown> | null {
+  const owner = (process.env.PAYT_OWNER_EMAIL ?? 'dermaxpro.oficial@gmail.com')
+    .trim()
+    .toLowerCase()
+  const lista = Array.isArray(ev.commission) ? ev.commission : []
+  const found = lista.find((c) => {
+    const email = c && typeof c === 'object' ? (c as Record<string, unknown>).email : null
+    return typeof email === 'string' && email.trim().toLowerCase() === owner
   })
-
   return found && typeof found === 'object' ? (found as Record<string, unknown>) : null
-}
-
-function commissionAmount(ev: Record<string, unknown>, type: string) {
-  const commission = commissionByType(ev, type)
-  return commission ? parseAmount(commission.amount) : null
 }
 
 function parseEventDate(value: string | null): Date {
@@ -136,35 +135,6 @@ function isApprovedPayment(ev: Record<string, unknown>) {
     status.includes('finaliz') ||
     status.includes('faturad')
   )
-}
-
-function detectarPapel(
-  ev: Record<string, unknown>,
-  affiliateEmail: string | null,
-  affiliateName: string | null,
-): 'produtor' | 'afiliado' {
-  const affiliateEmails = (process.env.PAYT_AFFILIATE_EMAILS ?? '')
-    .split(',')
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean)
-
-  if (affiliateEmail && affiliateEmails.includes(affiliateEmail)) return 'afiliado'
-  if (affiliateName) return 'afiliado'
-  if (commissionByType(ev, 'affiliation')) return 'afiliado'
-
-  const txt = (v: unknown) => (typeof v === 'string' ? v.toLowerCase() : '')
-  const ehAfiliado =
-    Boolean(ev.affiliate) ||
-    Boolean(ev.affiliate_id) ||
-    Boolean(ev.affiliateId) ||
-    Boolean(ev.id_affiliate) ||
-    Boolean(ev.afiliado) ||
-    txt(ev.commission_type).includes('afili') ||
-    txt(ev.type_seller).includes('afili') ||
-    txt(ev.role).includes('afili') ||
-    txt(ev.type).includes('afili')
-
-  return ehAfiliado ? 'afiliado' : 'produtor'
 }
 
 function tokenValido(req: VercelRequest): boolean {
@@ -233,7 +203,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ['transaction', 'total_price'],
     ['total_price'],
   ])
-  const valorRecebido = commissionAmount(eventRecord, 'producer') ?? valor
+  const minhaComissao =
+    event.integration_key === 'luminar-pay' ? null : comissaoDoDono(eventRecord)
+  const valorRecebido = (minhaComissao ? parseAmount(minhaComissao.amount) : null) ?? valor
   const paidAt = firstString(eventRecord, [
     ['transaction', 'paid_at'],
     ['paid_at'],
@@ -264,19 +236,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ['affiliator_email'],
     ]),
   )
-  const affiliateName = firstString(eventRecord, [
-    ['affiliate', 'name'],
-    ['affiliator', 'name'],
-    ['producer_affiliate', 'name'],
-    ['affiliate_name'],
-    ['affiliator_name'],
-    ['afiliado'],
-    ['Afiliado'],
-  ])
-  const papel =
-    gateway === 'payt'
-      ? detectarPapel(eventRecord, affiliateEmail, affiliateName)
-      : 'produtor'
+  // Papel REAL: afiliado SÓ quando o dono da conta ganha comissão de "affiliation".
+  // Caso contrário (producer, ou formato PayT V1 sem commission[]) => produtor.
+  const tipoMinhaComissao =
+    typeof minhaComissao?.type === 'string' ? (minhaComissao.type as string).toLowerCase() : null
+  const papel = tipoMinhaComissao === 'affiliation' ? 'afiliado' : 'produtor'
 
   if (event.test || !isApprovedPayment(eventRecord) || !externalId || valorRecebido <= 0) {
     return res.status(200).json({ ok: true, ignored: true })
